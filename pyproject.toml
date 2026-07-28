@@ -1,0 +1,40 @@
+[project]
+name = "ragstack"
+version = "0.1.0"
+description = "Local RAG over your documents, answered by Claude or a local model, exposed over MCP."
+requires-python = ">=3.10"
+dependencies = [
+    # Answer synthesis. Needs output_config.effort + thinking={"type": "adaptive"};
+    # both are GA on the regular (non-beta) messages endpoint. Floor is the
+    # oldest release verified to type them, not the oldest that might work.
+    "anthropic>=0.120",
+    # MCP server (FastMCP lives in the official SDK).
+    "mcp>=1.2",
+    # Vector store + similarity search.
+    "numpy>=1.26",
+    # PDF text extraction for .pdf documents in the corpus.
+    "pypdf>=4.0",
+    # .env loading in config.py.
+    "python-dotenv>=1.0",
+    # Local embeddings; pulls in torch + transformers.
+    "sentence-transformers>=3.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+ragstack = "ragstack.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: loads the real embedding model (deselect with -m 'not slow')",
+]

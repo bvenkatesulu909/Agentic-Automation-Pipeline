@@ -1,0 +1,18 @@
+# Virtualenv
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Secrets / local config
+.env
+
+# Built index (regenerate with `ragstack index`)
+.ragstack_index/
+
+# Test / tooling caches
+.pytest_cache/
