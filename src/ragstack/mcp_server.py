@@ -83,11 +83,9 @@ async def _lifespan(_server: FastMCP):
     The lifespan runs after the transport has wrapped the real stdout and
     before the first request, which is the window where neither is true.
     """
-    print(f"DBG lifespan entered warm={_warm_requested} idx={VectorStore.exists()}", file=sys.stderr, flush=True)
     if _warm_requested and VectorStore.exists():
         _warm_done.clear()
         threading.Thread(target=_warm_model, name="ragstack-warmup", daemon=True).start()
-        print("DBG warmup thread started", file=sys.stderr, flush=True)
     yield {}
 
 
@@ -220,6 +218,8 @@ def rag_answer(
         result = llm.answer(question, top_k=top_k, source_filter=source_filter)
     except llm.MissingCredentialsError as exc:
         return {"error": "no_credentials", "message": str(exc)}
+    except llm.InvalidCredentialsError as exc:
+        return {"error": "invalid_credentials", "message": str(exc)}
     except llm.ModelRefusalError as exc:
         return {"error": "refusal", "message": str(exc)}
     except llm.LocalModelError as exc:
@@ -270,9 +270,12 @@ def list_sources() -> str:
 
 
 def _warm_model() -> None:
-    """Load torch and the weights so the first `rag_search` answers in
-    milliseconds instead of stalling ~30s."""
-    print("DBG warmup running", file=sys.stderr, flush=True)
+    """Load the weights so the first `rag_search` answers in milliseconds
+    instead of stalling.
+
+    Only the weights — `main` has already imported the library on the main
+    thread, which is the part that cannot happen here. See `main`.
+    """
     try:
         with _no_stdout():
             from . import embed
@@ -292,7 +295,18 @@ def main(*, warm: bool = True) -> None:
     so the first `rag_search` answers in milliseconds without the startup itself
     outrunning the client's connect timeout. See `_lifespan`, which owns the
     timing; this only says whether to warm at all.
+
+    The *import* is the exception, and it happens here: on the main thread,
+    before any other thread exists. Importing sentence-transformers off the main
+    thread deadlocks inside scipy's BLAS extension loader, and the server wedges
+    with no error on either side — it makes no difference whether the import
+    lands in the warmup thread or in the worker FastMCP hands a tool call to,
+    because whichever gets there first is the one that hangs. Loading the
+    weights off-thread afterwards is fine; only the import has to be serialised.
+    It costs ~16s, which still fits the 30s a client allows for the handshake.
     """
+    import sentence_transformers  # noqa: F401
+
     global _warm_requested
     _warm_requested = warm
 

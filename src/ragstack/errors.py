@@ -15,6 +15,14 @@ class MissingCredentialsError(RagStackError):
     """No usable Anthropic credential was found."""
 
 
+class InvalidCredentialsError(RagStackError):
+    """A credential was supplied and the API rejected it.
+
+    Kept separate from `MissingCredentialsError` because the fix is different:
+    one means "set a key", the other means "the key you set is wrong".
+    """
+
+
 class ModelRefusalError(RagStackError):
     """The model's safety classifiers declined the request."""
 

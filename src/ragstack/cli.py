@@ -81,6 +81,9 @@ def cmd_ask(args: argparse.Namespace) -> int:
     except llm.MissingCredentialsError as exc:
         _print_err(f"\nerror: {exc}")
         return 2
+    except llm.InvalidCredentialsError as exc:
+        _print_err(f"\nerror: {exc}")
+        return 5
     except llm.ModelRefusalError as exc:
         _print_err(f"\nerror: {exc}")
         return 3

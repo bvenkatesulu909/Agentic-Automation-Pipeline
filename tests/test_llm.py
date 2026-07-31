@@ -39,14 +39,27 @@ def test_recognises_sdk_auth_resolution_typeerror():
     assert isinstance(llm._as_credentials_error(exc), llm.MissingCredentialsError)
 
 
-def test_recognises_authentication_error():
+def _auth_error() -> anthropic.AuthenticationError:
     # AuthenticationError needs a real response to read .request off.
     response = httpx.Response(
         401, request=httpx.Request("POST", "https://api.anthropic.com/v1/messages")
     )
-    exc = anthropic.AuthenticationError(message="invalid key", response=response, body=None)
+    return anthropic.AuthenticationError(message="invalid key", response=response, body=None)
 
-    assert isinstance(llm._as_credentials_error(exc), llm.MissingCredentialsError)
+
+def test_rejected_key_is_not_reported_as_a_missing_one():
+    """A 401 means a key was supplied and refused — a different fix than setting one."""
+    mapped = llm._as_credentials_error(_auth_error())
+
+    assert isinstance(mapped, llm.InvalidCredentialsError)
+    assert not isinstance(mapped, llm.MissingCredentialsError)
+
+
+def test_rejected_key_message_points_at_the_real_causes():
+    text = str(llm._as_credentials_error(_auth_error()))
+    assert "rejected" in text.lower()
+    assert "revoked" in text.lower(), "should name the usual suspects"
+    assert "overrides the .env" in text, "a stale shell variable is the subtle one"
 
 
 def test_unrelated_typeerror_is_not_swallowed():

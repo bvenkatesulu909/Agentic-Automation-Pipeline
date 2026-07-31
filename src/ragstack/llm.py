@@ -20,6 +20,7 @@ import anthropic
 
 from . import config, ollama, retrieve
 from .errors import (  # re-exported: callers catch these off `llm`
+    InvalidCredentialsError,
     LocalModelError,
     MissingCredentialsError,
     ModelRefusalError,
@@ -30,6 +31,7 @@ from .store import SearchHit
 __all__ = [
     "SYSTEM_PROMPT",
     "AnswerResult",
+    "InvalidCredentialsError",
     "LocalModelError",
     "MissingCredentialsError",
     "ModelRefusalError",
@@ -81,6 +83,21 @@ _CREDENTIAL_HELP = (
     "Retrieval (`ragstack search`) works without any credential."
 )
 
+_REJECTED_HELP = (
+    "The Anthropic API rejected the credential that is set — it is present but "
+    "not valid.\n"
+    "Common causes: the key was revoked or rotated, it was copied with a missing "
+    "character or a trailing newline, or it belongs to a different organisation.\n"
+    "Check which one is actually in play:\n"
+    "    $env:ANTHROPIC_API_KEY.Length                # PowerShell, current session\n"
+    "and compare against a fresh key from "
+    "https://console.anthropic.com/settings/keys\n\n"
+    "Note a real environment variable overrides the .env file, so a stale one in "
+    "your shell wins over a corrected .env.\n"
+    "Meanwhile, `--backend ollama` answers locally and `ragstack search` needs no "
+    "credential at all."
+)
+
 
 def build_client() -> anthropic.Anthropic:
     """Construct the SDK client, letting it resolve credentials from the
@@ -92,16 +109,23 @@ def build_client() -> anthropic.Anthropic:
     return anthropic.Anthropic()
 
 
-def _as_credentials_error(exc: BaseException) -> MissingCredentialsError | None:
-    """Recognise 'no credential configured' however the SDK reports it.
+def _as_credentials_error(
+    exc: BaseException,
+) -> MissingCredentialsError | InvalidCredentialsError | None:
+    """Recognise a credential problem however the SDK reports it, and say which.
 
-    With no key set, the client constructs cleanly and the SDK raises a plain
-    `TypeError` while building request headers — not `AuthenticationError`,
-    which only covers a key that was supplied and rejected. Matching on the
-    message keeps a genuine TypeError in our own request kwargs visible.
+    The two arrive by different routes. With no key set anywhere, the client
+    constructs cleanly and the SDK raises a plain `TypeError` while building
+    request headers. A key that was supplied and rejected comes back as
+    `AuthenticationError` from the API instead. Telling someone who just pasted
+    a key that no key was found sends them to fix the wrong thing, so the two
+    map to different errors.
+
+    Matching the TypeError on its message keeps a genuine TypeError in our own
+    request kwargs visible rather than disguised as an auth problem.
     """
     if isinstance(exc, anthropic.AuthenticationError):
-        return MissingCredentialsError(_CREDENTIAL_HELP)
+        return InvalidCredentialsError(_REJECTED_HELP)
     if isinstance(exc, TypeError) and "resolve authentication method" in str(exc):
         return MissingCredentialsError(_CREDENTIAL_HELP)
     return None

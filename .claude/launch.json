@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "adk-incident-commander",
+      "runtimeExecutable": ".venv/Scripts/adk.exe",
+      "runtimeArgs": ["web", "adk_apps", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}

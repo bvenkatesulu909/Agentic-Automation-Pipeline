@@ -16,3 +16,6 @@ dist/
 
 # Test / tooling caches
 .pytest_cache/
+
+# ADK dev-UI session and artifact storage (recreated on each `adk web` run)
+adk_apps/**/.adk/
