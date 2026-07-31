@@ -1,0 +1,1357 @@
+<title>Cloud Deal Desk</title>
+
+<style>
+  :root {
+    --paper:      #FAF9F6;
+    --surface:    #FFFFFF;
+    --surface-2:  #F2F0EA;
+    --line:       #DFDBD0;
+    --line-soft:  #EAE7DE;
+    --text:       #191D26;
+    --text-2:     #565E6E;
+    --text-3:     #666E7C;
+    /* Darkened from a mid brass so the small-caps labels it carries clear AA on
+       paper (5.41), on card surfaces (5.69), and on the brass-soft override row
+       (4.52). The lighter tone read better and failed all three. */
+    --brass:      #875F22;
+    --brass-soft: #F0E4CC;
+    --pass:       #256349;
+    --pass-soft:  #DDEDE4;
+    --warn:       #8F4E12;
+    --warn-soft:  #F6E6D4;
+    --block:      #9E2F46;
+    --block-soft: #F6DDE2;
+
+    --f-display: ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --f-body:    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --f-data:    ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+
+    --r: 3px;
+    --pad: clamp(1rem, 3vw, 1.75rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:      #10141C;
+      --surface:    #161B25;
+      --surface-2:  #1D232F;
+      --line:       #2C3442;
+      --line-soft:  #232A36;
+      --text:       #E8E9EC;
+      --text-2:     #A3ABBA;
+      --text-3:     #8792A5;
+      --brass:      #D2A250;
+      --brass-soft: #33291A;
+      --pass:       #4FB489;
+      --pass-soft:  #162B24;
+      --warn:       #E0913F;
+      --warn-soft:  #2E2317;
+      --block:      #E0647E;
+      --block-soft: #2E1A20;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #10141C;
+    --surface:    #161B25;
+    --surface-2:  #1D232F;
+    --line:       #2C3442;
+    --line-soft:  #232A36;
+    --text:       #E8E9EC;
+    --text-2:     #A3ABBA;
+    --text-3:     #8792A5;
+    --brass:      #D2A250;
+    --brass-soft: #33291A;
+    --pass:       #4FB489;
+    --pass-soft:  #162B24;
+    --warn:       #E0913F;
+    --warn-soft:  #2E2317;
+    --block:      #E0647E;
+    --block-soft: #2E1A20;
+  }
+
+  :root[data-theme="light"] {
+    --paper:      #FAF9F6;
+    --surface:    #FFFFFF;
+    --surface-2:  #F2F0EA;
+    --line:       #DFDBD0;
+    --line-soft:  #EAE7DE;
+    --text:       #191D26;
+    --text-2:     #565E6E;
+    --text-3:     #666E7C;
+    /* Darkened from a mid brass so the small-caps labels it carries clear AA on
+       paper (5.41), on card surfaces (5.69), and on the brass-soft override row
+       (4.52). The lighter tone read better and failed all three. */
+    --brass:      #875F22;
+    --brass-soft: #F0E4CC;
+    --pass:       #256349;
+    --pass-soft:  #DDEDE4;
+    --warn:       #8F4E12;
+    --warn-soft:  #F6E6D4;
+    --block:      #9E2F46;
+    --block-soft: #F6DDE2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--text);
+    font-family: var(--f-body);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--pad);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .mast {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--text);
+  }
+  .mast h1 {
+    font-family: var(--f-display);
+    font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .mast p {
+    margin: 0.35rem 0 0;
+    color: var(--text-2);
+    max-width: 58ch;
+  }
+  .stamp {
+    font-family: var(--f-data);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--brass);
+    border: 1px solid var(--brass);
+    border-radius: var(--r);
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+
+  /* ---------- verdict strip ---------- */
+
+  .verdict {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 0.85rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.85rem;
+    box-shadow: 0 1px 12px rgb(0 0 0 / 0.07);
+  }
+  .v-cell { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+  .v-label {
+    font-family: var(--f-data);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-3);
+  }
+  .v-figure {
+    font-family: var(--f-display);
+    font-size: 1.5rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .v-note { font-size: 0.78rem; color: var(--text-2); line-height: 1.35; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    align-self: flex-start;
+    font-family: var(--f-data);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.45rem;
+    border-radius: var(--r);
+    border: 1px solid currentColor;
+  }
+  .is-pass  { color: var(--pass);  background: var(--pass-soft); }
+  .is-warn  { color: var(--warn);  background: var(--warn-soft); }
+  .is-block { color: var(--block); background: var(--block-soft); }
+
+  /* ---------- panels ---------- */
+
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 4fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+  @media (max-width: 800px) { .cols { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .panel > h2 {
+    font-family: var(--f-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .panel > h2 .sub {
+    display: block;
+    font-family: var(--f-body);
+    font-size: 0.76rem;
+    font-weight: 400;
+    color: var(--text-3);
+    margin-top: 0.15rem;
+    letter-spacing: 0;
+  }
+
+  /* ---------- form ---------- */
+
+  .field { display: flex; flex-direction: column; gap: 0.3rem; }
+  .field > label {
+    font-family: var(--f-data);
+    font-size: 0.63rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-3);
+  }
+  .field select,
+  .field input[type="number"] {
+    font-family: var(--f-data);
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 0.42rem 0.5rem;
+    width: 100%;
+  }
+  .field input[type="range"] { width: 100%; accent-color: var(--brass); }
+  .field select:focus-visible,
+  .field input:focus-visible {
+    outline: 2px solid var(--brass);
+    outline-offset: 1px;
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  .slider-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .slider-val {
+    font-family: var(--f-data);
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--brass);
+  }
+
+  /* ---------- ledger ---------- */
+
+  .ledger { display: flex; flex-direction: column; gap: 0; }
+  .lrow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.6rem 1rem;
+    align-items: baseline;
+    padding: 0.5rem 0;
+    border-bottom: 1px dotted var(--line);
+  }
+  .lrow:last-child { border-bottom: 0; }
+  .lrow .k { min-width: 0; }
+  .lrow .k b { font-weight: 600; }
+  .lrow .src {
+    display: block;
+    font-family: var(--f-data);
+    font-size: 0.64rem;
+    color: var(--text-3);
+    letter-spacing: 0.02em;
+    margin-top: 0.1rem;
+    overflow-wrap: anywhere;
+  }
+  .lrow .v {
+    font-family: var(--f-data);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.92rem;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .lrow.total {
+    border-top: 2px solid var(--text);
+    border-bottom: 0;
+    margin-top: 0.35rem;
+    padding-top: 0.6rem;
+  }
+  .lrow.total .v { font-size: 1.15rem; font-weight: 600; }
+  .lrow.override { background: var(--brass-soft); margin-inline: -0.4rem; padding-inline: 0.4rem; }
+  .lrow.struck .v { color: var(--text-3); text-decoration: line-through; }
+  .lrow.muted .v { color: var(--text-3); }
+
+  /* ---------- matrix ---------- */
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line-soft); }
+  thead th {
+    font-family: var(--f-data);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td.num { font-family: var(--f-data); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  tr.active td { background: var(--brass-soft); }
+  tr.active td:first-child { box-shadow: inset 3px 0 0 var(--brass); font-weight: 600; }
+
+  /* ---------- pipeline ---------- */
+
+  .pipe { display: flex; flex-direction: column; gap: 0.55rem; }
+  .stage {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brass);
+    border-radius: var(--r);
+    padding: 0.6rem 0.75rem;
+    background: var(--surface-2);
+  }
+  .stage-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    justify-content: space-between;
+  }
+  .stage-name { font-family: var(--f-data); font-size: 0.85rem; font-weight: 600; }
+  .stage-kind {
+    font-family: var(--f-data);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+  }
+  .stage p { margin: 0.3rem 0 0; font-size: 0.82rem; color: var(--text-2); }
+  .kids { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.55rem; }
+  .kid {
+    border-left: 2px solid var(--line);
+    padding-left: 0.65rem;
+  }
+  .kid .stage-name { font-weight: 500; }
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.3rem;
+  }
+  .tool {
+    font-family: var(--f-data);
+    font-size: 0.63rem;
+    color: var(--text-2);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 0.08rem 0.32rem;
+  }
+  .tool.rag { color: var(--brass); border-color: var(--brass); }
+
+  /* ---------- notes ---------- */
+
+  .note {
+    border-left: 3px solid var(--brass);
+    background: var(--surface-2);
+    padding: 0.75rem 0.9rem;
+    border-radius: var(--r);
+    font-size: 0.85rem;
+    color: var(--text-2);
+  }
+  .note b { color: var(--text); }
+  .note p { margin: 0 0 0.5rem; }
+  .note p:last-child { margin-bottom: 0; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+    font-size: 0.78rem;
+    color: var(--text-3);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  code {
+    font-family: var(--f-data);
+    font-size: 0.85em;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    padding: 0.05em 0.28em;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lrow .v, .v-figure { transition: color 140ms ease; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <h1>Cloud Deal Desk</h1>
+      <p>Model a managed Google Cloud deal against the same rates and the same
+         commercial rules the <code>sales_app</code> agents use. Every figure below
+         is derived, not typed in.</p>
+    </div>
+    <div class="stamp" id="stamp">rates captured<br>&#8212;</div>
+  </header>
+
+  <section class="verdict" id="verdict" aria-label="Deal verdict">
+    <div class="v-cell">
+      <span class="v-label">Gross margin</span>
+      <span class="v-figure" id="v-margin">&#8212;</span>
+      <span class="pill" id="v-margin-pill">&#8212;</span>
+    </div>
+    <div class="v-cell">
+      <span class="v-label">Net platform fee</span>
+      <span class="v-figure" id="v-fee">&#8212;</span>
+      <span class="pill" id="v-fee-pill">&#8212;</span>
+    </div>
+    <div class="v-cell">
+      <span class="v-label">Approver</span>
+      <span class="v-figure" id="v-approver" style="font-size:1.05rem">&#8212;</span>
+      <span class="v-note" id="v-approver-note"></span>
+    </div>
+    <div class="v-cell">
+      <span class="v-label">Structure</span>
+      <span class="v-figure" id="v-struct" style="font-size:1.05rem">&#8212;</span>
+      <span class="v-note" id="v-struct-note"></span>
+    </div>
+  </section>
+
+  <div class="cols">
+
+    <section class="panel">
+      <h2>The deal
+        <span class="sub">What the customer is asking for</span>
+      </h2>
+
+      <div class="field">
+        <label for="region">Region</label>
+        <select id="region"></select>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="mtype">Machine type</label>
+          <select id="mtype"></select>
+        </div>
+        <div class="field">
+          <label for="count">Instances</label>
+          <input type="number" id="count" min="0" max="500" step="1" value="6">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="disk">Disk type</label>
+          <select id="disk"></select>
+        </div>
+        <div class="field">
+          <label for="gb">Storage GB</label>
+          <input type="number" id="gb" min="0" max="500000" step="100" value="4000">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="commit">Commitment</label>
+          <select id="commit">
+            <option value="0">On demand</option>
+            <option value="1">1-year CUD</option>
+            <option value="3">3-year CUD</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="term">Term (months)</label>
+          <select id="term">
+            <option>6</option>
+            <option selected>12</option>
+            <option>24</option>
+            <option>36</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="slider-head">
+          <label for="discount">Discount on platform fee</label>
+          <span class="slider-val" id="discount-val">25%</span>
+        </div>
+        <input type="range" id="discount" min="0" max="50" step="0.5" value="25">
+      </div>
+
+      <div class="field">
+        <div class="slider-head">
+          <label for="feepct">Platform fee rate</label>
+          <span class="slider-val" id="feepct-val">18%</span>
+        </div>
+        <input type="range" id="feepct" min="5" max="35" step="0.5" value="18">
+      </div>
+
+      <div class="note" id="cud-note"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Derivation
+        <span class="sub">Each line names where the number came from</span>
+      </h2>
+      <div class="ledger" id="ledger"></div>
+    </section>
+
+  </div>
+
+  <section class="panel">
+    <h2>Discount authority
+      <span class="sub">The band table decides who signs. The margin floor decides whether there is anything to sign.</span>
+    </h2>
+    <div class="scroll">
+      <table id="matrix">
+        <thead>
+          <tr><th>Discount on platform fee</th><th>Approver required</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p><b>Two rules override the table.</b> Annual contract value above
+         &#8377;50,00,000 requires Finance at any discount, including 0%. And a discount
+         that puts gross margin below 35% cannot be approved by anyone &#8212; the deal
+         has to be restructured, not re-signed.</p>
+      <p>A discount that drops the net fee under the &#8377;75,000 monthly floor is a
+         floor breach: allowed, but only with Finance on top of the band approver.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>The agents behind this
+      <span class="sub">Nine agents. The dashboard reimplements their arithmetic; the agents add judgment, retrieval, and review.</span>
+    </h2>
+    <div class="pipe" id="pipe"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Rate snapshot
+      <span class="sub">Read from Google's public SKU catalog in INR &#8212; <span id="skucount">&#8212;</span> SKUs paged, filtered in memory</span>
+    </h2>
+    <div class="scroll">
+      <table id="rates">
+        <thead>
+          <tr>
+            <th>Family</th><th>On demand core</th><th>On demand RAM</th>
+            <th>1-yr core</th><th>3-yr core</th><th>Commitment</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p><b>These are per-vCPU-hour and per-GiB-hour rates, not machine prices.</b>
+         The catalog holds no per-machine-type SKU at all, which is why shared-core
+         types like <code>e2-medium</code> &#8212; billed at a fraction of a vCPU &#8212; get
+         overstated by anything that multiplies the core rate by the advertised
+         vCPU count.</p>
+      <p>Four families have no committed-use SKU in this catalog. The agents report
+         that as an answer rather than substituting a remembered CUD percentage,
+         and so does this page.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div><b>Rates are a snapshot, not live.</b> This page makes no network calls &#8212;
+      the figures were read from the Cloud Billing catalog at the timestamp above and
+      baked in. Re-run the extractor to refresh them.</div>
+    <div><b>The commercial rules are this repository's example policy.</b> The 18%
+      fee, &#8377;75,000 floor, 45% cost-to-serve, 35% margin floor and discount bands come
+      from <code>docs/pricing-and-discounts.md</code> and the constants in
+      <code>adk_apps/sales_app/tools.py</code>. Replace both with your own before
+      quoting anything to a customer.</div>
+    <div>Free-tier allowances are deliberately never applied: Always Free is one
+      allowance per billing account, and customer workloads run on ours.</div>
+  </footer>
+
+</div>
+
+<script>
+const RATES = {
+ "captured_utc": "2026-07-31T17:42:26+00:00",
+ "currency": "INR",
+ "hours_per_month": 730,
+ "regions": {
+  "asia-south1": {
+   "compute": {
+    "e2": {
+     "core": 2.473279,
+     "ram": 0.331421,
+     "label": "Mumbai"
+    },
+    "n2": {
+     "core": 3.584463,
+     "ram": 0.48032,
+     "label": "Mumbai"
+    },
+    "n2d": {
+     "core": 1.7135,
+     "ram": 0.229681,
+     "label": "Mumbai"
+    },
+    "n1": {
+     "core": 3.584463,
+     "ram": 0.48032,
+     "label": "Mumbai"
+    },
+    "c3": {
+     "core": 3.401888,
+     "ram": 0.386627,
+     "label": "Mumbai"
+    },
+    "c2": {
+     "core": 3.853321,
+     "ram": 0.516382,
+     "label": "Mumbai"
+    },
+    "t2d": {
+     "core": 1.7135,
+     "ram": 0.229681,
+     "label": "Mumbai"
+    }
+   },
+   "commitment": {
+    "e2": {
+     "1": {
+      "core": 1.558166,
+      "ram": 0.208795
+     },
+     "3": {
+      "core": 1.112976,
+      "ram": 0.149139
+     }
+    },
+    "n2": {
+     "1": {
+      "core": 2.257919,
+      "ram": 0.30256
+     },
+     "3": {
+      "core": 1.612867,
+      "ram": 0.216182
+     }
+    },
+    "n1": {
+     "1": {
+      "core": 2.257976,
+      "ram": 0.30256
+     },
+     "3": {
+      "core": 1.612867,
+      "ram": 0.216182
+     }
+    },
+    "c3": {
+     "1": {
+      "core": 2.143239,
+      "ram": 0.243581
+     },
+     "3": {
+      "core": 1.530899,
+      "ram": 0.173972
+     }
+    }
+   },
+   "disk": {
+    "pd-standard": 4.53132,
+    "pd-balanced": 11.3283,
+    "pd-ssd": 19.25811,
+    "hyperdisk-balanced": 1.604842
+   }
+  },
+  "us-west1": {
+   "compute": {
+    "e2": {
+     "core": 2.059069,
+     "ram": 0.275989,
+     "label": "Americas"
+    },
+    "n2": {
+     "core": 2.984157,
+     "ram": 0.399983,
+     "label": "Americas"
+    },
+    "n2d": {
+     "core": 2.596258,
+     "ram": 0.347968,
+     "label": "Americas"
+    },
+    "n1": {
+     "core": 2.984157,
+     "ram": 0.399983,
+     "label": "Americas"
+    },
+    "c3": {
+     "core": 3.271047,
+     "ram": 0.371757,
+     "label": "Americas"
+    },
+    "c2": {
+     "core": 3.207986,
+     "ram": 0.430003,
+     "label": "Americas"
+    },
+    "t2d": {
+     "core": 2.596258,
+     "ram": 0.347968,
+     "label": "Americas"
+    }
+   },
+   "commitment": {
+    "e2": {
+     "1": {
+      "core": 1.297213,
+      "ram": 0.173873
+     },
+     "3": {
+      "core": 0.926581,
+      "ram": 0.124195
+     }
+    },
+    "n2": {
+     "1": {
+      "core": 1.880026,
+      "ram": 0.25196
+     },
+     "3": {
+      "core": 1.342876,
+      "ram": 0.180026
+     }
+    },
+    "n1": {
+     "1": {
+      "core": 1.880026,
+      "ram": 0.25196
+     },
+     "3": {
+      "core": 1.342876,
+      "ram": 0.180026
+     }
+    },
+    "c3": {
+     "1": {
+      "core": 2.060807,
+      "ram": 0.234213
+     },
+     "3": {
+      "core": 1.472018,
+      "ram": 0.167281
+     }
+    }
+   },
+   "disk": {
+    "pd-standard": 3.7761,
+    "pd-balanced": 9.44025,
+    "pd-ssd": 16.048425,
+    "hyperdisk-balanced": 1.51044
+   }
+  },
+  "us-central1": {
+   "compute": {
+    "e2": {
+     "core": 2.059069,
+     "ram": 0.275989,
+     "label": "Americas"
+    },
+    "n2": {
+     "core": 2.984157,
+     "ram": 0.399983,
+     "label": "Americas"
+    },
+    "n2d": {
+     "core": 2.596258,
+     "ram": 0.347968,
+     "label": "Americas"
+    },
+    "n1": {
+     "core": 2.984157,
+     "ram": 0.399983,
+     "label": "Americas"
+    },
+    "c3": {
+     "core": 3.271047,
+     "ram": 0.371757,
+     "label": "Americas"
+    },
+    "c2": {
+     "core": 3.207986,
+     "ram": 0.430003,
+     "label": "Americas"
+    },
+    "t2d": {
+     "core": 2.596258,
+     "ram": 0.347968,
+     "label": "Americas"
+    }
+   },
+   "commitment": {
+    "e2": {
+     "1": {
+      "core": 1.297213,
+      "ram": 0.173873
+     },
+     "3": {
+      "core": 0.926581,
+      "ram": 0.124195
+     }
+    },
+    "n2": {
+     "1": {
+      "core": 1.880026,
+      "ram": 0.25196
+     },
+     "3": {
+      "core": 1.342876,
+      "ram": 0.180026
+     }
+    },
+    "n1": {
+     "1": {
+      "core": 1.880026,
+      "ram": 0.25196
+     },
+     "3": {
+      "core": 1.342876,
+      "ram": 0.180026
+     }
+    },
+    "c3": {
+     "1": {
+      "core": 2.060807,
+      "ram": 0.234213
+     },
+     "3": {
+      "core": 1.472018,
+      "ram": 0.167281
+     }
+    }
+   },
+   "disk": {
+    "pd-standard": 3.7761,
+    "pd-balanced": 9.44025,
+    "pd-ssd": 16.048425,
+    "hyperdisk-balanced": 7.5522
+   }
+  },
+  "europe-west1": {
+   "compute": {
+    "e2": {
+     "core": 2.265034,
+     "ram": 0.303607,
+     "label": "EMEA"
+    },
+    "n2": {
+     "core": 3.282658,
+     "ram": 0.44001,
+     "label": "EMEA"
+    },
+    "n2d": {
+     "core": 2.855959,
+     "ram": 0.382802,
+     "label": "EMEA"
+    },
+    "n1": {
+     "core": 3.282658,
+     "ram": 0.44001,
+     "label": "EMEA"
+    },
+    "c3": {
+     "core": 3.60175,
+     "ram": 0.409342,
+     "label": "Belgium"
+    },
+    "c2": {
+     "core": 3.52886,
+     "ram": 0.473051,
+     "label": "EMEA"
+    },
+    "t2d": {
+     "core": 2.855959,
+     "ram": 0.382802,
+     "label": "EMEA"
+    }
+   },
+   "commitment": {
+    "e2": {
+     "1": {
+      "core": 1.426971,
+      "ram": 0.191272
+     },
+     "3": {
+      "core": 1.019265,
+      "ram": 0.136623
+     }
+    },
+    "n2": {
+     "1": {
+      "core": 2.068076,
+      "ram": 0.277166
+     },
+     "3": {
+      "core": 1.47721,
+      "ram": 0.197962
+     }
+    },
+    "n1": {
+     "1": {
+      "core": 2.068076,
+      "ram": 0.277166
+     },
+     "3": {
+      "core": 1.47721,
+      "ram": 0.197962
+     }
+    },
+    "c3": {
+     "1": {
+      "core": 2.269154,
+      "ram": 0.257892
+     },
+     "3": {
+      "core": 1.620839,
+      "ram": 0.184193
+     }
+    }
+   },
+   "disk": {
+    "pd-standard": 3.7761,
+    "pd-balanced": 9.44025,
+    "pd-ssd": 16.048425,
+    "hyperdisk-balanced": 3.322968
+   }
+  }
+ },
+ "sku_count": 32119
+};
+
+// Policy constants \u2014 mirror adk_apps/sales_app/tools.py exactly.
+const FEE_FLOOR      = 75000;
+const CTS_PCT        = 45;
+const MARGIN_FLOOR   = 35;
+const FINANCE_ACV    = 5000000;
+const BANDS = [
+  [10,  "Account Executive (self-serve)"],
+  [20,  "Sales Director"],
+  [30,  "VP Sales and Finance"],
+  [100, "CFO \u2014 and a minimum 24-month term"],
+];
+
+// Machine specs \u2014 mirror pricing.py. Shared-core types cannot be derived.
+const SHARED = {
+  "e2-micro": [0.25, 1], "e2-small": [0.5, 2], "e2-medium": [1, 4],
+  "f1-micro": [0.2, 0.6], "g1-small": [0.5, 1.7],
+};
+const RATIO = {
+  "e2-standard": 4, "e2-highmem": 8, "e2-highcpu": 1,
+  "n2-standard": 4, "n2-highmem": 8, "n2-highcpu": 1,
+  "n2d-standard": 4, "n2d-highmem": 8, "n2d-highcpu": 1,
+  "n1-standard": 3.75, "n1-highmem": 6.5, "n1-highcpu": 0.9,
+  "c3-standard": 4, "c3-highmem": 8, "c3-highcpu": 2,
+  "c2-standard": 4, "t2d-standard": 4,
+};
+const SIZES = {
+  "e2-standard": [2,4,8,16,32], "e2-highmem": [2,4,8,16], "e2-highcpu": [2,4,8,16,32],
+  "n2-standard": [2,4,8,16,32,48], "n2-highmem": [2,4,8,16,32], "n2-highcpu": [2,4,8,16,32],
+  "n2d-standard": [2,4,8,16,32], "n1-standard": [1,2,4,8,16,32], "n1-highmem": [2,4,8,16],
+  "c3-standard": [4,8,22,44], "c3-highmem": [4,8,22], "c2-standard": [4,8,16,30],
+  "t2d-standard": [1,2,4,8,16,32],
+};
+
+function spec(mt) {
+  if (SHARED[mt]) return { vcpu: SHARED[mt][0], ram: SHARED[mt][1], family: mt.split("-")[0], shared: true };
+  const p = mt.split("-");
+  if (p.length !== 3) return null;
+  const key = p[0] + "-" + p[1], n = parseInt(p[2], 10);
+  if (!RATIO[key] || !Number.isFinite(n)) return null;
+  return { vcpu: n, ram: +(n * RATIO[key]).toFixed(2), family: p[0], shared: false };
+}
+
+const inr = n => "\u20B9" + new Intl.NumberFormat("en-IN", {
+  minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+const inr0 = n => "\u20B9" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n);
+const pct = n => n.toFixed(1) + "%";
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, html) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+};
+
+// ---------- populate controls ----------
+
+const regionSel = $("region");
+Object.keys(RATES.regions).forEach(r => {
+  const o = el("option"); o.value = r;
+  o.textContent = r + " \u00B7 " + (RATES.regions[r].compute.n2?.label ?? "");
+  regionSel.appendChild(o);
+});
+
+const mSel = $("mtype");
+Object.keys(SHARED).filter(m => m.startsWith("e2")).forEach(m => {
+  const o = el("option"); o.value = m; o.textContent = m + " (shared core)";
+  mSel.appendChild(o);
+});
+Object.keys(SIZES).forEach(key => {
+  const g = el("optgroup"); g.label = key;
+  SIZES[key].forEach(n => {
+    const o = el("option"); o.value = key + "-" + n;
+    const s = spec(key + "-" + n);
+    o.textContent = `${key}-${n} \u00B7 ${s.vcpu} vCPU / ${s.ram} GB`;
+    g.appendChild(o);
+  });
+  mSel.appendChild(g);
+});
+mSel.value = "n2-standard-4";
+
+const dSel = $("disk");
+["pd-balanced", "pd-standard", "pd-ssd", "hyperdisk-balanced"].forEach(d => {
+  const o = el("option"); o.value = d; o.textContent = d; dSel.appendChild(o);
+});
+
+$("stamp").innerHTML = "rates captured<br>" + RATES.captured_utc.replace("T", " ").replace("+00:00", " UTC");
+$("skucount").textContent = RATES.sku_count.toLocaleString("en-IN");
+
+// ---------- the model ----------
+
+function compute() {
+  const region = regionSel.value;
+  const R = RATES.regions[region];
+  const mt = mSel.value;
+  const s = spec(mt);
+  const count = Math.max(0, +$("count").value || 0);
+  const gb = Math.max(0, +$("gb").value || 0);
+  const diskType = dSel.value;
+  const years = +$("commit").value;
+  const term = +$("term").value;
+  const disc = +$("discount").value;
+  const feePct = +$("feepct").value;
+
+  const od = R.compute[s.family];
+  const cm = years ? R.commitment[s.family]?.[String(years)] : null;
+  const commitUnavailable = years > 0 && !cm;
+
+  // Each component is rounded to paise before the economics see it, because the
+  // pricing tools return rounded figures and the agent passes those on. Carrying
+  // full float precision here would put this page a few paise off the number the
+  // deal desk actually gates on, which is exactly the kind of quiet divergence
+  // that makes two sources of truth useless.
+  const r2 = n => Math.round(n * 100) / 100;
+
+  const rate = cm || od;
+  const hourlyEach = s.vcpu * rate.core + s.ram * rate.ram;
+  const compute_ = r2(hourlyEach * RATES.hours_per_month * count);
+
+  const odHourlyEach = s.vcpu * od.core + s.ram * od.ram;
+  const computeOd = r2(odHourlyEach * RATES.hours_per_month * count);
+
+  const diskRate = R.disk[diskType];
+  const storage = r2(gb * diskRate);
+  const cloud = r2(compute_ + storage);
+
+  // --- deal economics: mirrors compute_deal_economics() ---
+  const computedFee = cloud * feePct / 100;
+  const listFee = Math.max(computedFee, FEE_FLOOR);
+  const floorApplied = listFee > computedFee;
+  const netFee = listFee * (1 - disc / 100);
+  const cts = listFee * CTS_PCT / 100;
+  const margin = netFee ? (netFee - cts) / netFee * 100 : -100;
+  const monthlyTotal = netFee + cloud;
+  const acv = monthlyTotal * 12;
+  const tcv = monthlyTotal * term;
+
+  // --- authority: mirrors check_discount_authority() ---
+  const band = BANDS.find(b => disc <= b[0]) || [100, "CFO"];
+  const extra = [], blockers = [];
+  if (acv > FINANCE_ACV) extra.push(`Finance \u2014 ACV of ${inr0(acv)} exceeds ${inr0(FINANCE_ACV)}`);
+  if (disc > 30 && term < 24) blockers.push(`Above 30% needs a 24-month minimum; this is ${term} months`);
+  if (term < 12) extra.push("Sales Director \u2014 term is below the 12-month standard, and carries no discount eligibility");
+  if (term >= 36) extra.push("Finance \u2014 a 36-month term fixes our fee against three years of cost inflation");
+  if (netFee < FEE_FLOOR) extra.push(`Finance \u2014 net fee ${inr0(netFee)} is under the ${inr0(FEE_FLOOR)} monthly floor`);
+
+  return { region, R, s, mt, count, gb, diskType, years, term, disc, feePct,
+           od, cm, commitUnavailable, rate, compute_, computeOd, diskRate, storage, cloud,
+           computedFee, listFee, floorApplied, netFee, cts, margin, monthlyTotal, acv, tcv,
+           band, extra, blockers,
+           meetsMargin: margin >= MARGIN_FLOOR, belowFloor: netFee < FEE_FLOOR };
+}
+
+// ---------- render ----------
+
+function row(k, src, v, cls) {
+  const r = el("div", "lrow" + (cls ? " " + cls : ""));
+  const kk = el("div", "k");
+  kk.appendChild(el("span", null, k));
+  if (src) kk.appendChild(el("span", "src", src));
+  r.appendChild(kk);
+  r.appendChild(el("div", "v", v));
+  return r;
+}
+
+function render() {
+  const d = compute();
+
+  $("discount-val").textContent = d.disc + "%";
+  $("feepct-val").textContent = d.feePct + "%";
+
+  // -- verdict --
+  $("v-margin").textContent = pct(d.margin);
+  const mp = $("v-margin-pill");
+  mp.textContent = d.meetsMargin ? "clears 35% floor" : "blocked \u2014 below floor";
+  mp.className = "pill " + (d.meetsMargin ? "is-pass" : "is-block");
+
+  $("v-fee").textContent = inr0(d.netFee);
+  const fp = $("v-fee-pill");
+  fp.textContent = d.belowFloor ? "under monthly floor" : "at or above floor";
+  fp.className = "pill " + (d.belowFloor ? "is-warn" : "is-pass");
+
+  $("v-approver").textContent = d.band[1];
+  $("v-approver-note").textContent = d.extra.length
+    ? "Plus: " + d.extra.join(" \u00B7 ")
+    : "No additional sign-off triggered.";
+
+  $("v-struct").textContent = d.blockers.length ? "Invalid" : "Valid";
+  $("v-struct-note").textContent = d.blockers.length
+    ? d.blockers.join(" \u00B7 ")
+    : `${d.term}-month term, ${d.disc}% discount \u2014 structurally allowed.`;
+
+  // -- ledger --
+  const L = $("ledger");
+  L.textContent = "";
+  const label = d.years && !d.commitUnavailable ? `${d.years}-yr committed` : "on demand";
+
+  L.appendChild(row(
+    `<b>Compute</b> \u2014 ${d.count} \u00D7 ${d.mt}`,
+    `${d.s.vcpu} vCPU \u00D7 ${d.rate.core.toFixed(6)} + ${d.s.ram} GB \u00D7 ${d.rate.ram.toFixed(6)} per hour \u00D7 ${RATES.hours_per_month} h \u00B7 ${label}`,
+    inr(d.compute_)));
+
+  if (d.years && !d.commitUnavailable) {
+    L.appendChild(row(
+      "Commitment saving",
+      `against ${inr0(d.computeOd)} on demand \u2014 the customer keeps all of it`,
+      "\u2212" + inr(d.computeOd - d.compute_), "muted"));
+  }
+  if (d.commitUnavailable) {
+    L.appendChild(row(
+      "Commitment",
+      `no Commitment v1 SKU for ${d.s.family} in ${d.region} \u2014 priced on demand, not estimated`,
+      "n/a", "muted"));
+  }
+
+  L.appendChild(row(
+    `<b>Storage</b> \u2014 ${d.gb.toLocaleString("en-IN")} GB ${d.diskType}`,
+    `${d.diskRate.toFixed(6)} per GiB-month \u00B7 zonal capacity`,
+    inr(d.storage)));
+
+  L.appendChild(row(
+    "<b>Monthly cloud cost</b>",
+    "resold to the customer at Google list price \u2014 zero markup",
+    inr(d.cloud), "total"));
+
+  L.appendChild(row(
+    `Platform fee at ${d.feePct}%`,
+    "our revenue line \u2014 margin lives here, not in resold consumption",
+    inr(d.computedFee), d.floorApplied ? "struck" : ""));
+
+  if (d.floorApplied) {
+    L.appendChild(row(
+      "Monthly floor applies",
+      "delivery cost is largely fixed, so small deals lose money without it",
+      inr(FEE_FLOOR), "override"));
+  }
+
+  L.appendChild(row(
+    `Discount ${d.disc}% on the fee`,
+    "consumption cannot be discounted \u2014 it is already at list",
+    "\u2212" + inr(d.listFee - d.netFee)));
+
+  L.appendChild(row(
+    "<b>Net platform fee</b>", "what we actually bill on top of consumption",
+    inr(d.netFee)));
+
+  L.appendChild(row(
+    `Cost to serve (${CTS_PCT}% of list fee)`,
+    "on-call, platform engineering, the shared landing zone \u2014 computed on the LIST fee, because none of it gets cheaper when we discount",
+    "\u2212" + inr(d.cts)));
+
+  L.appendChild(row(
+    "<b>Gross margin</b>",
+    `(net fee \u2212 cost to serve) \u00F7 net fee \u00B7 floor is ${MARGIN_FLOOR}%`,
+    pct(d.margin), "total"));
+
+  L.appendChild(row(
+    "Monthly total to customer", "consumption plus net fee",
+    inr(d.monthlyTotal)));
+  L.appendChild(row(
+    "ACV / TCV", `annualised \u00B7 ${d.term}-month term`,
+    inr0(d.acv) + " / " + inr0(d.tcv)));
+
+  // -- CUD note --
+  const n = $("cud-note");
+  if (d.commitUnavailable) {
+    n.innerHTML = `<p><b>No committed-use SKU exists for the ${d.s.family} family in
+      ${d.region}.</b> The agents refuse to substitute a remembered CUD percentage
+      here, and this page does the same \u2014 the figures above are on demand.</p>`;
+  } else if (d.years) {
+    const save = d.computeOd - d.compute_;
+    const eff = d.computeOd ? (1 - d.compute_ / d.computeOd) * 100 : 0;
+    n.innerHTML = `<p><b>The commitment costs us money.</b> It cuts the customer's
+      compute by ${pct(eff)} (${inr0(save)}/mo), and they keep every rupee of it \u2014
+      consumption is resold at list. Our fee is a percentage of managed spend, so
+      the same commitment reduces our revenue by about
+      ${inr0(save * d.feePct / 100)}/mo before the floor is applied.</p>`;
+  } else {
+    n.innerHTML = `<p>Priced on demand. Switching to a commitment lowers the
+      customer's bill and \u2014 because the fee is a percentage of managed spend \u2014
+      lowers ours too. Try it and watch the floor bind.</p>`;
+  }
+
+  // -- matrix --
+  const tb = $("matrix").querySelector("tbody");
+  tb.textContent = "";
+  let lo = 0;
+  BANDS.forEach(([cap, who]) => {
+    const tr = el("tr");
+    const range = cap === 100 ? "Above 30%" : `${lo === 0 ? "0" : (lo + 0.01).toFixed(2)}% \u2013 ${cap}%`;
+    tr.appendChild(el("td", null, range));
+    tr.appendChild(el("td", null, who));
+    if (who === d.band[1]) tr.className = "active";
+    tb.appendChild(tr);
+    lo = cap;
+  });
+
+  // -- rate table --
+  const rb = $("rates").querySelector("tbody");
+  rb.textContent = "";
+  Object.keys(d.R.compute).forEach(f => {
+    const c = d.R.compute[f], k1 = d.R.commitment[f]?.["1"], k3 = d.R.commitment[f]?.["3"];
+    const tr = el("tr");
+    tr.appendChild(el("td", null, `<code>${f}</code>`));
+    tr.appendChild(el("td", "num", c.core.toFixed(6)));
+    tr.appendChild(el("td", "num", c.ram.toFixed(6)));
+    tr.appendChild(el("td", "num", k1 ? k1.core.toFixed(6) : "\u2014"));
+    tr.appendChild(el("td", "num", k3 ? k3.core.toFixed(6) : "\u2014"));
+    tr.appendChild(el("td", null, k1
+      ? `<span class="pill is-pass">${pct((1 - k3.core / c.core) * 100)} at 3 yr</span>`
+      : `<span class="pill is-warn">no SKU</span>`));
+    if (f === d.s.family) tr.className = "active";
+    rb.appendChild(tr);
+  });
+}
+
+// ---------- pipeline ----------
+
+const PIPE = [
+  { name: "opportunity_qualifier", kind: "LlmAgent",
+    desc: "Scores the opportunity in code, so the answer does not move with how enthusiastically the deal was described. Separates unmet criteria \u2014 work to do \u2014 from hard disqualifiers, which are a decision to walk away.",
+    tools: ["qualify_opportunity", "record_deal_risk"], rag: true },
+  { name: "deal_research", kind: "ParallelAgent",
+    desc: "Three lenses that share no state. The two pricing branches size the requirement independently on purpose: if they disagree, the requirement was ambiguous, and that is a finding rather than something to average.",
+    kids: [
+      { name: "solution_architect", kind: "cost to serve",
+        tools: ["price_compute_footprint", "price_storage_footprint", "lookup_sku_price"], rag: true },
+      { name: "commitment_analyst", kind: "who actually gains",
+        tools: ["price_committed_use", "lookup_sku_price"], rag: true },
+      { name: "commercial_analyst", kind: "our own policy",
+        tools: ["check_discount_authority"], rag: true },
+    ] },
+  { name: "proposal_review", kind: "LoopAgent \u00B7 max 2",
+    desc: "Draft, challenge, revise. The critic holds the approval tool and the writer does not \u2014 an agent that both writes and approves its own work will approve it.",
+    kids: [
+      { name: "proposal_writer", kind: "drafts",
+        tools: ["compute_deal_economics", "check_discount_authority"], rag: true },
+      { name: "deal_desk_critic", kind: "holds approval",
+        tools: ["compute_deal_economics", "check_discount_authority", "qualify_opportunity", "price_committed_use", "approve_proposal"], rag: true },
+    ] },
+  { name: "proposal_report", kind: "LlmAgent",
+    desc: "Writes the account-team summary. Leads with whether the deal can proceed at all, and keeps every human-approval gate visible.",
+    tools: [], rag: true },
+];
+
+function renderPipe() {
+  const p = $("pipe");
+  PIPE.forEach(st => {
+    const box = el("div", "stage");
+    const head = el("div", "stage-head");
+    head.appendChild(el("span", "stage-name", st.name));
+    head.appendChild(el("span", "stage-kind", st.kind));
+    box.appendChild(head);
+    if (st.desc) box.appendChild(el("p", null, st.desc));
+    if (st.tools || st.rag) box.appendChild(toolRow(st));
+    if (st.kids) {
+      const kids = el("div", "kids");
+      st.kids.forEach(k => {
+        const kb = el("div", "kid");
+        const kh = el("div", "stage-head");
+        kh.appendChild(el("span", "stage-name", k.name));
+        kh.appendChild(el("span", "stage-kind", k.kind));
+        kb.appendChild(kh);
+        kb.appendChild(toolRow(k));
+        kids.appendChild(kb);
+      });
+      box.appendChild(kids);
+    }
+    p.appendChild(box);
+  });
+}
+
+function toolRow(o) {
+  const t = el("div", "tools");
+  (o.tools || []).forEach(name => t.appendChild(el("span", "tool", name)));
+  if (o.rag) t.appendChild(el("span", "tool rag", "rag_search \u00B7 MCP"));
+  return t;
+}
+
+// ---------- wire up ----------
+
+["region", "mtype", "count", "disk", "gb", "commit", "term", "discount", "feepct"]
+  .forEach(id => $(id).addEventListener("input", render));
+
+renderPipe();
+render();
+</script>
