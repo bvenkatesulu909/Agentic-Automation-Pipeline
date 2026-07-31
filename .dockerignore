@@ -1,0 +1,16 @@
+.venv/
+.git/
+.github/
+.claude/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+# Rebuilt inside the image; shipping the host copy would bake in a stale index.
+.ragstack_index/
+# Never let local credentials or config reach the image.
+.env
+**/.env
+**/.adk/
+tests/
+k8s/

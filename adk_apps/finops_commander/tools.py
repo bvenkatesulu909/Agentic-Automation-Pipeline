@@ -158,8 +158,15 @@ def estimate_disk_monthly_cost(size_gb: int, disk_type: str, region: str) -> dic
         return {"status": "unknown_disk_type", "disk_type": disk_type}
 
     hits = billing_api.sku_prices(family, region)
+    # Same error shape guard as the instance estimator — see the note there.
+    if hits and "_error" in hits[0]:
+        return {"status": "price_lookup_failed", "error": hits[0], "disk_type": disk_type}
     rate = next(
-        (s["unit_price"] for s in hits if not s["description"].lower().startswith("regional")),
+        (
+            s["unit_price"]
+            for s in hits
+            if not s.get("description", "").lower().startswith("regional")
+        ),
         None,
     )
     if rate is None:
@@ -219,12 +226,34 @@ def estimate_instance_monthly_cost(machine_type: str, region: str) -> dict[str, 
     vcpu, ram_gb = spec
     core = billing_api.sku_prices("E2 Instance Core", region)
     ram = billing_api.sku_prices("E2 Instance Ram", region)
-    core_rate = next(
-        (s["unit_price"] for s in core if "spot" not in s["description"].lower()), None
-    )
-    ram_rate = next(
-        (s["unit_price"] for s in ram if "spot" not in s["description"].lower()), None
-    )
+
+    # sku_prices returns [{"_error": ...}] when the catalog call fails, which has
+    # no "description" key. Iterating it blindly raises KeyError and surfaces as a
+    # 500 with no explanation — as it did the first time this ran on GKE, where
+    # the pod's service account lacked serviceusage.serviceUsageConsumer. Report
+    # the failure as data instead so the agent can say what went wrong.
+    for label, hits in (("core", core), ("ram", ram)):
+        if hits and "_error" in hits[0]:
+            return {
+                "status": "price_lookup_failed",
+                "which": label,
+                "error": hits[0],
+                "machine_type": machine_type,
+                "region": region,
+            }
+
+    def _rate(hits: list[dict[str, Any]]) -> float | None:
+        return next(
+            (
+                s["unit_price"]
+                for s in hits
+                if "spot" not in s.get("description", "").lower()
+            ),
+            None,
+        )
+
+    core_rate = _rate(core)
+    ram_rate = _rate(ram)
     if core_rate is None or ram_rate is None:
         return {"status": "no_price_found", "machine_type": machine_type, "region": region}
 

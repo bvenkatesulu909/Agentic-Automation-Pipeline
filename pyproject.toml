@@ -8,8 +8,12 @@ dependencies = [
     # both are GA on the regular (non-beta) messages endpoint. Floor is the
     # oldest release verified to type them, not the oldest that might work.
     "anthropic>=0.120",
-    # MCP server (FastMCP lives in the official SDK).
-    "mcp>=1.2",
+    # MCP server (FastMCP lives in the official SDK). Upper bound is not
+    # cosmetic: mcp 2.0 removed McpHttpClientFactory from
+    # mcp.client.streamable_http, which google-adk 2.5 imports at module load.
+    # An unpinned `>=1.2` resolves to 2.x in a clean environment and breaks every
+    # MCP-using agent with an ImportError at startup.
+    "mcp>=1.24,<2",
     # Vector store + similarity search.
     "numpy>=1.26",
     # PDF text extraction for .pdf documents in the corpus.
@@ -22,6 +26,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+# The multi-agent apps in adk_apps/. Kept optional because ragstack itself — the
+# CLI, the index, the MCP server — does not need any of it; only the agents do.
+adk = [
+    # Provides the `adk` console script the container entrypoint runs.
+    "google-adk>=2.5",
+    # Used directly by the agents' GCP tools for REST calls against Compute,
+    # Cloud Billing, and BigQuery.
+    "requests>=2.31",
+]
 
 [project.scripts]
 ragstack = "ragstack.cli:main"

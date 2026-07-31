@@ -27,6 +27,7 @@ Two operational facts this file encodes, both learned the hard way:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -35,21 +36,38 @@ from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
 from google.genai import types
 from mcp import StdioServerParameters
+from mcp.client.stdio import get_default_environment
 
 load_dotenv(Path(__file__).parent / ".env", override=False)
 
 MODEL = "gemini-2.5-flash"
 _GEN = types.GenerateContentConfig(temperature=0.2, max_output_tokens=4096)
 
-RAGSTACK_EXE = str(
-    Path(__file__).resolve().parents[2] / ".venv" / "Scripts" / "ragstack.exe"
-)
+# On the Windows dev box ragstack lives in the venv's Scripts directory; in the
+# container it is a console script already on PATH. Resolve rather than assume,
+# so the same file works in both places.
+_VENV_EXE = Path(__file__).resolve().parents[2] / ".venv" / "Scripts" / "ragstack.exe"
+RAGSTACK_CMD = str(_VENV_EXE) if _VENV_EXE.exists() else "ragstack"
+
+# The MCP SDK does NOT hand the parent process's environment to a stdio server —
+# it builds a minimal safe one, so custom variables are silently dropped. That
+# matters here: ragstack derives its corpus and index paths from RAGSTACK_ROOT,
+# and without it the server falls back to a location relative to the installed
+# package and reports an empty corpus. The failure is quiet, because an empty
+# index is a valid answer rather than an error.
+#
+# Only forwarded when set, so the dev box (editable install, paths already
+# correct) is unaffected.
+_FORWARD = ("RAGSTACK_ROOT", "RAGSTACK_DOCS_DIR", "RAGSTACK_INDEX_DIR", "HF_HOME")
+_env = get_default_environment()
+_env.update({k: os.environ[k] for k in _FORWARD if os.environ.get(k)})
 
 ragstack_mcp = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
-            command=RAGSTACK_EXE,
+            command=RAGSTACK_CMD,
             args=["serve"],
+            env=_env,
         ),
         # Measured at 34.8s for the embedding model to load before the server
         # answers `initialize`. The 5.0 default is not close to sufficient; this

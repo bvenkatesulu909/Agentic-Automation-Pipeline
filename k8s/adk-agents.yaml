@@ -1,0 +1,83 @@
+# ADK agent apps on GKE.
+#
+# Credentials come from Workload Identity: the Kubernetes ServiceAccount below is
+# bound to a Google service account, and the pod gets tokens from the metadata
+# server. No key file is mounted, and none is baked into the image — a downloaded
+# service-account key would be a long-lived credential sitting in a container.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adk-agents
+  annotations:
+    iam.gke.io/gcp-service-account: adk-agents@venkatesh-68cb677e.iam.gserviceaccount.com
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adk-agents
+  labels:
+    app: adk-agents
+spec:
+  # One replica: the node is a single e2-medium and the image wants ~1.5 GB for
+  # torch plus the embedding model. A second replica would not schedule.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adk-agents
+  template:
+    metadata:
+      labels:
+        app: adk-agents
+    spec:
+      serviceAccountName: adk-agents
+      containers:
+        - name: adk-agents
+          # Pinned by digest rather than the :v1 tag — a tag can be moved and a
+          # pod restart would then silently pull different code.
+          image: us-west1-docker.pkg.dev/venkatesh-68cb677e/adk/adk-agents@sha256:3c5cf84e56426c25a028d1c22a543bfee6c0f6a2144782c7e15844ba74701571
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              cpu: 300m
+              memory: 1Gi
+            limits:
+              # GKE reserves roughly 1 GB of the node's 4 GB, so this is close to
+              # the ceiling of what will actually schedule here.
+              memory: 2500Mi
+          # The embedding model takes ~35s to load before the server is useful.
+          # A startup probe with a generous budget stops the kubelet killing the
+          # container mid-load, which a plain liveness probe would do.
+          startupProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 30
+            failureThreshold: 4
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adk-agents
+spec:
+  # LoadBalancer provisions a public IP and a forwarding rule, which bills
+  # separately from the cluster. Switch to ClusterIP and use `kubectl port-forward`
+  # if the endpoint does not need to be reachable from the internet.
+  type: LoadBalancer
+  selector:
+    app: adk-agents
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
