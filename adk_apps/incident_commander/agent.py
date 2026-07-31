@@ -43,6 +43,9 @@ from google.genai import types
 # entry point behave the same. Real environment variables still win.
 load_dotenv(Path(__file__).parent / ".env", override=False)
 
+# Shared singleton: one ragstack subprocess across every app here.
+from ragstack_mcp_tool import RAGSTACK_MCP
+
 from .tools import (
     audit_compute_fleet,
     audit_network_exposure,
@@ -50,10 +53,11 @@ from .tools import (
     check_deploy_window,
     mark_plan_approved,
     record_timeline,
-    search_runbook,
 )
 
-MODEL = "gemini-2.5-flash"
+# Provider chosen from the environment; Gemini via Vertex unless
+# ADK_MODEL_PROVIDER=openrouter. See adk_apps/model_config.py.
+from model_config import MODEL
 
 # Thinking models spend part of the budget before emitting a token, so a tight
 # cap silently yields empty candidates. This is sized for a reasoning turn plus
@@ -79,7 +83,7 @@ triage = LlmAgent(
 
 The user has reported an incident. Classify it.
 
-1. Call `search_runbook` to retrieve the team's severity definitions. Do not
+1. Call `rag_search` to retrieve the team's severity definitions. Do not
    rely on general knowledge of SEV levels — this team's thresholds are their
    own and you must quote theirs.
 2. Assign SEV1, SEV2, or SEV3. The runbook has an explicit tie-break rule when
@@ -88,7 +92,7 @@ The user has reported an incident. Classify it.
 
 Output: the severity, the paging and response-time obligation it triggers, and
 the runbook citation you based it on. Be brief — three or four lines.""",
-    tools=[search_runbook, record_timeline],
+    tools=[RAGSTACK_MCP, record_timeline],
     generate_content_config=_GEN,
     output_key="triage",
 )
@@ -130,7 +134,7 @@ policy_investigator = LlmAgent(
 Triage said:
 {triage}
 
-Use `search_runbook` — more than once, with different queries — to find what
+Use `rag_search` — more than once, with different queries — to find what
 applies. Cover at minimum: who must be paged and how fast; who becomes Incident
 Commander and what that role may and may not do; whether mitigation or diagnosis
 comes first; and what postmortem obligation this severity creates.
@@ -139,7 +143,7 @@ Quote the runbook. Every claim must carry its citation. If the runbook is silent
 on something, say so explicitly rather than filling the gap with a plausible
 industry default — a confident invention here becomes a false obligation in the
 final report.""",
-    tools=[search_runbook],
+    tools=[RAGSTACK_MCP],
     generate_content_config=_GEN,
     output_key="policy_findings",
 )
@@ -155,7 +159,7 @@ Triage said:
 
 1. Call `check_deploy_window` with "now" to establish whether a deploy would be
    permitted at this moment.
-2. Call `search_runbook` for the deploy policy: the release window, the canary
+2. Call `rag_search` for the deploy policy: the release window, the canary
    thresholds, and the rollback rule.
 3. The runbook has a specific instruction about rolling back when a deploy went
    out recently and the timing is even loosely correlated. Find it, quote it, and
@@ -163,7 +167,7 @@ Triage said:
 
 If the user gave no deployment timing, say what you would need to know rather
 than assuming a deploy did or did not happen.""",
-    tools=[check_deploy_window, search_runbook],
+    tools=[check_deploy_window, RAGSTACK_MCP],
     generate_content_config=_GEN,
     output_key="timing_findings",
 )
@@ -231,14 +235,14 @@ Check, in order:
 3. Is every destructive step marked as needing human approval?
 4. Does any step claim a fact that the investigation findings do not support?
 
-Use `search_runbook` to verify anything you are unsure of rather than guessing.
+Use `rag_search` to verify anything you are unsure of rather than guessing.
 
 If all four checks pass, call `mark_plan_approved` with your reason. If any
 fails, do NOT call it — instead list the specific defects, each naming the step
 number and what is wrong. Vague feedback wastes an iteration: say what to change.
 
 Approving a plan that fails a check is a worse outcome than another round.""",
-    tools=[search_runbook, mark_plan_approved],
+    tools=[RAGSTACK_MCP, mark_plan_approved],
     generate_content_config=_GEN,
     output_key="critique",
 )

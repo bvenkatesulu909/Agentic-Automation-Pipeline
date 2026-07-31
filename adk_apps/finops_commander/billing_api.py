@@ -13,6 +13,12 @@ Four distinct sources feed the FinOps agents, and they are not equally good:
 
 `query_billing_export` is written to fail *informatively* rather than throw, so an
 agent gets "not configured yet" as data it can report instead of a stack trace.
+
+The subtle part is the 24-48h backfill window. An export table that exists but is
+still empty queries *successfully* and returns zero rows, which reads exactly like
+zero spend. So `export_status` reports a `state`, not a boolean, and
+`query_billing_export` refuses to run against an empty export rather than hand
+back an absence of data that looks like a measurement.
 """
 
 from __future__ import annotations
@@ -341,34 +347,135 @@ def project_billing(project: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+# Export tables are named by Google, not by the user: gcp_billing_export_v1_* for
+# standard usage cost, _resource_v1_* for the resource-level variant, and
+# gcp_pricing_export_v1_* for the price list. Anything else sitting in the dataset
+# is somebody's scratch table and says nothing about whether charges are flowing.
+_EXPORT_PREFIXES = ("gcp_billing_export", "gcp_pricing_export")
+
+# The five states, and what each one means for whether a cost figure can be
+# called measured. Same vocabulary as billing_app.connections.export_connection,
+# which draws these distinctions for the billing-plumbing audit.
+_EXPORT_NOTES = {
+    "no_dataset": (
+        "No billing export dataset in this project. Actual spend is UNMEASURABLE; "
+        "every cost figure has to be an estimate from list price. Enable the "
+        "export in Cloud Console -> Billing -> Billing export -> BigQuery export."
+    ),
+    "dataset_but_no_export_table": (
+        "The dataset exists but holds no export table, so the export was never "
+        "finished in the Cloud Console — there is no API for that step. Actual "
+        "spend is UNMEASURABLE."
+    ),
+    "table_but_no_rows": (
+        "CRITICAL: the export table exists but is EMPTY, so a query against it "
+        "SUCCEEDS and returns zero rows. That is not evidence of zero spend, it is "
+        "evidence of no data yet — the export backfills over roughly 24-48 hours "
+        "from the moment it was enabled. Actual spend is UNMEASURABLE until rows "
+        "land. Do not report zero, and do not call any figure a measured charge."
+    ),
+    "unreadable": (
+        "BigQuery could not be read, which says nothing either way about whether an "
+        "export exists. Report this as 'cannot tell', NOT as 'not configured'. "
+        "Actual spend is UNMEASURABLE."
+    ),
+    "connected": "",
+}
+
+
 def export_status() -> dict[str, Any]:
-    """Whether the BigQuery billing export has produced any tables yet."""
+    """Whether the BigQuery billing export exists AND has any data in it.
+
+    Existence and usability are different questions, and conflating them is how a
+    still-backfilling export gets reported as measured spend of zero. Each export
+    table's row count comes from its own `tables.get` — `tables.list` omits
+    `numRows`, and "exists but empty" is precisely the state that matters here.
+
+    Returns:
+        `state` (one of `no_dataset`, `dataset_but_no_export_table`,
+        `table_but_no_rows`, `connected`, `unreadable`), `spend_is_measurable`,
+        every export table with its row count, and a note naming the next action.
+        Only `connected` permits calling a figure a measured charge.
+    """
     data = _get(
         f"https://bigquery.googleapis.com/bigquery/v2/projects/{HOME_PROJECT}"
         f"/datasets/{EXPORT_DATASET}/tables"
     )
     if "_error" in data:
-        return {"configured": False, "reason": data}
-    tables = [t["tableReference"]["tableId"] for t in data.get("tables", [])]
+        # A missing dataset and an unreadable one are different findings: only the
+        # first is safe to report as absence. A 403 rendered as "not configured"
+        # is the same class of confident falsehood as an empty table rendered as
+        # zero spend.
+        state = "no_dataset" if data["_error"].startswith("HTTP 404") else "unreadable"
+        return {
+            "state": state,
+            "configured": False,
+            "has_rows": False,
+            "spend_is_measurable": False,
+            "dataset": EXPORT_DATASET,
+            "tables": [],
+            "total_rows": 0,
+            "reason": data,
+            "note": _EXPORT_NOTES[state],
+        }
+
+    tables: list[dict[str, Any]] = []
+    for t in data.get("tables", []):
+        table_id = t["tableReference"]["tableId"]
+        if not table_id.startswith(_EXPORT_PREFIXES):
+            continue
+        detail = _get(
+            f"https://bigquery.googleapis.com/bigquery/v2/projects/{HOME_PROJECT}"
+            f"/datasets/{EXPORT_DATASET}/tables/{table_id}"
+        )
+        readable = "_error" not in detail
+        tables.append(
+            {
+                "table": table_id,
+                # None means the row count could not be read, which is treated
+                # below as "no rows" — erring towards unmeasurable, never towards
+                # "everything is fine".
+                "rows": int(detail.get("numRows", 0)) if readable else None,
+                "last_modified_ms": detail.get("lastModifiedTime") if readable else None,
+            }
+        )
+
+    if not tables:
+        state = "dataset_but_no_export_table"
+    elif all(not t["rows"] for t in tables):
+        state = "table_but_no_rows"
+    else:
+        state = "connected"
+
     return {
-        "configured": bool(tables),
+        "state": state,
+        # Kept for callers that only want the yes/no, but it now answers "is there
+        # spend data to read", not "does a table exist". Those differ for the
+        # entire 24-48h backfill window.
+        "configured": state == "connected",
+        "has_rows": state == "connected",
+        "spend_is_measurable": state == "connected",
         "dataset": EXPORT_DATASET,
         "tables": tables,
-        "note": (
-            ""
-            if tables
-            else "Dataset exists but no export table yet. The export must be "
-            "enabled in the Cloud Console billing settings, after which data "
-            "backfills over roughly 24-48 hours."
-        ),
+        "total_rows": sum(t["rows"] or 0 for t in tables),
+        "note": _EXPORT_NOTES[state],
     }
 
 
 def query_billing_export(sql: str) -> dict[str, Any]:
-    """Run a read-only query against the billing export, if it exists."""
+    """Run a read-only query against the billing export, if it holds data."""
     status = export_status()
-    if not status["configured"]:
-        return {"status": "not_configured", **status, "rows": []}
+    if not status["spend_is_measurable"]:
+        # Refuses to run even when the table exists. Querying an empty export
+        # succeeds and returns zero rows, and zero rows handed back as a result is
+        # indistinguishable from a measured zero — the exact failure this app is
+        # built around. The state and note are the answer instead.
+        return {
+            "status": "no_spend_data",
+            **status,
+            "rows": [],
+            "row_count": 0,
+        }
 
     res = _post(
         f"https://bigquery.googleapis.com/bigquery/v2/projects/{HOME_PROJECT}/queries",
@@ -382,4 +489,10 @@ def query_billing_export(sql: str) -> dict[str, Any]:
         dict(zip(fields, [c.get("v") for c in r.get("f", [])]))
         for r in res.get("rows", [])
     ]
-    return {"status": "ok", "row_count": len(rows), "rows": rows}
+    return {
+        "status": "ok",
+        "state": status["state"],
+        "spend_is_measurable": True,
+        "row_count": len(rows),
+        "rows": rows,
+    }

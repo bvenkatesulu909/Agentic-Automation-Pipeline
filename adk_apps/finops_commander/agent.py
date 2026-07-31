@@ -30,6 +30,9 @@ from google.adk.agents import LlmAgent, LoopAgent, ParallelAgent, SequentialAgen
 from google.adk.agents.callback_context import CallbackContext
 from google.genai import types
 
+# Shared singleton: one ragstack subprocess across every app here.
+from ragstack_mcp_tool import RAGSTACK_MCP
+
 from .tools import (
     approve_savings_plan,
     check_budgets,
@@ -46,7 +49,9 @@ from .tools import (
 
 load_dotenv(Path(__file__).parent / ".env", override=False)
 
-MODEL = "gemini-2.5-flash"
+# Provider chosen from the environment; Gemini via Vertex unless
+# ADK_MODEL_PROVIDER=openrouter. See adk_apps/model_config.py.
+from model_config import MODEL
 _GEN = types.GenerateContentConfig(temperature=0.2, max_output_tokens=4096)
 
 
@@ -135,17 +140,30 @@ spend_reader = LlmAgent(
     description="Determines whether real spend data exists, and reads it if so.",
     instruction="""Your job is to establish what is actually KNOWN about spend.
 
-FIRST call `check_spend_data_availability`.
+FIRST call `check_spend_data_availability`. Read its `state`, not merely whether
+a table exists — those are different questions, and only one of them is yours.
 
-If it reports the export is configured, call `query_actual_spend` to summarise
-charges by service for the current month, and report real figures.
+ONLY `state: connected` means spend is measurable. In that case call
+`query_actual_spend` to summarise charges by service for the current month and
+report those figures as MEASURED.
 
-If it reports NOT configured, say so directly and stop. Do not estimate, do not
-substitute list prices, and do not soften it. Your single most important output
-is a clear statement of whether the numbers downstream will be measured or
-estimated — every other agent depends on knowing which.
+Every other state means actual spend is UNMEASURABLE. Say so directly and stop:
+- `table_but_no_rows` is the one that looks like success and is not. The export
+  table exists but holds no rows because it is still backfilling, which takes
+  24-48 hours. Report that the export exists but has NO DATA YET, so spend is
+  unmeasurable. Never report zero spend — zero rows is an absence of data, not a
+  charge of zero, and presenting it as one is the worst thing you could do here.
+- `dataset_but_no_export_table` and `no_dataset` mean the export was never
+  finished in the Console.
+- `unreadable` means you could not tell, which is NOT the same as "not
+  configured". Say you could not tell.
 
-Be brief. Two or three lines is enough.""",
+Do not estimate, do not substitute list prices, and do not soften any of it. Your
+single most important output is an unambiguous statement of whether the numbers
+downstream will be MEASURED or ESTIMATED — every other agent depends on knowing
+which, and none of them can check it for you.
+
+Be brief. Three or four lines is enough.""",
     tools=[check_spend_data_availability, query_actual_spend],
     generate_content_config=_GEN,
     output_key="spend_data",
@@ -191,8 +209,10 @@ for disks, and `lookup_sku_price` for anything else. Never state a number you di
 not get from a tool, and never do the cost arithmetic yourself.
 
 Three rules you must follow:
-- If `{spend_data}` says actual spend is unavailable, label every figure an
-  ESTIMATE FROM LIST PRICE. Do not present estimates as charges.
+- If `{spend_data}` says actual spend is unavailable or UNMEASURABLE — including
+  when the export table exists but is empty — label every figure an ESTIMATE FROM
+  LIST PRICE. Do not present estimates as charges, and never state a spend of zero
+  on the strength of an empty export.
 - **Never claim a saving on a free-tier-covered resource.** If an estimator
   reports `free_tier_eligible`, or a disk whose `estimated_actual_monthly_inr` is
   zero, the realisable saving is approximately zero. Presenting its list price as
@@ -202,12 +222,18 @@ Three rules you must follow:
   are advising an operator; you execute nothing.
 
 Do not recommend deleting something merely because it is idle. Say what would
-break if it went away, and if you cannot tell, say that instead.""",
+break if it went away, and if you cannot tell, say that instead.
+
+Before recommending anything that stops or deletes infrastructure, call
+`rag_search` against the team's own documents. A change that saves money and
+violates a written policy is not a saving. If the corpus says nothing about it,
+say so rather than assuming you are clear.""",
     tools=[
         estimate_instance_monthly_cost,
         estimate_disk_monthly_cost,
         lookup_sku_price,
         record_finding,
+        RAGSTACK_MCP,
     ],
     generate_content_config=_GEN,
     output_key="savings_plan",
@@ -229,9 +255,10 @@ Spend data availability:
 Check, in order:
 1. **Provenance.** Does every INR figure trace to a tool result? A number that
    appeared from nowhere is the failure mode you exist to catch.
-2. **Honest labelling.** If actual spend data is unavailable, is every figure
-   labelled an estimate from list price? A plan that implies measured charges
-   when none were measured fails.
+2. **Honest labelling.** If actual spend data is unavailable or unmeasurable, is
+   every figure labelled an estimate from list price? A plan that implies measured
+   charges when none were measured fails. So does one that reports zero spend
+   because an export table existed but was empty.
 3. **Approval gates.** Is every destructive step marked as needing human approval?
 4. **Consequences.** Does each recommendation say what would break? "Delete the
    unattached disk" without asking whether it holds data is not a safe

@@ -324,12 +324,27 @@ def check_project_billing_links() -> dict[str, Any]:
 def check_spend_data_availability() -> dict[str, Any]:
     """Check whether real spend data is available yet.
 
-    Call this BEFORE making any claim about actual money spent. If it reports
-    not configured, you must describe your figures as estimates from list price,
-    never as actual charges.
+    Call this BEFORE making any claim about actual money spent.
+
+    A table existing is NOT the same as data existing, so this reports a `state`
+    rather than a yes/no. The five states need different answers:
+
+    * `no_dataset` — no export was ever set up.
+    * `dataset_but_no_export_table` — the export was not finished in the Console.
+    * `table_but_no_rows` — the export is switched on but has not backfilled yet.
+      This is the trap: querying it SUCCEEDS and returns zero rows, which reads
+      exactly like zero spend. It is an absence of data, not a charge of zero.
+    * `connected` — real rows exist.
+    * `unreadable` — BigQuery could not be read, so nothing is known either way.
+
+    Only `connected` sets `spend_is_measurable` and permits describing a figure as
+    an actual charge. In every other state, including `table_but_no_rows`, actual
+    spend is UNMEASURABLE and every figure you report must be labelled an estimate
+    from list price.
 
     Returns:
-        Whether the BigQuery billing export exists and has produced tables.
+        `state`, `spend_is_measurable`, each export table with its row count, and
+        a note naming the next action.
     """
     return {"status": "ok", **billing_api.export_status()}
 
@@ -337,14 +352,17 @@ def check_spend_data_availability() -> dict[str, Any]:
 def query_actual_spend(sql: str) -> dict[str, Any]:
     """Query real charged amounts from the BigQuery billing export.
 
-    Only works once the export is configured. Returns `not_configured` otherwise —
-    treat that as a fact to report, not a failure to work around.
+    Only runs when `check_spend_data_availability` reports `connected`. Otherwise
+    it returns `no_spend_data` with the state and does NOT query — including when
+    the export table exists but is empty, because that query would succeed and
+    return zero rows that are indistinguishable from a measured zero. Treat
+    `no_spend_data` as a fact to report, not a failure to work around.
 
     Args:
         sql: A standard-SQL SELECT against the billing export table.
 
     Returns:
-        Result rows, or the reason no data is available.
+        Result rows, or the state explaining why no spend data exists.
     """
     return billing_api.query_billing_export(sql)
 

@@ -34,9 +34,48 @@ spec:
         - name: adk-agents
           # Pinned by digest rather than the :v1 tag — a tag can be moved and a
           # pod restart would then silently pull different code.
-          image: us-west1-docker.pkg.dev/venkatesh-68cb677e/adk/adk-agents@sha256:3c5cf84e56426c25a028d1c22a543bfee6c0f6a2144782c7e15844ba74701571
+          # v7 — the first image carrying billing_app and sales_app. Earlier
+          # tags serve only the three Gemini apps.
+          image: us-west1-docker.pkg.dev/venkatesh-68cb677e/adk/adk-agents@sha256:845d46baf8ea3088ace2a5f88d79eef2f812a016379a4e06b3982af2c2e98096
           ports:
             - containerPort: 8000
+          env:
+            # "vertex" (default) uses Workload Identity and needs no key. Set to
+            # "openrouter" to route every agent through OpenRouter instead.
+            - name: ADK_MODEL_PROVIDER
+              value: "vertex"
+            # Paid model — needs credits on the OpenRouter account. Supports
+            # tool calling, which most cheap models do not.
+            - name: OPENROUTER_MODEL
+              value: "tencent/hy3"
+            # billing_app reads its own two variables instead of the shared
+            # ones, so the "vertex" setting above keeps the other three apps on
+            # Gemini without dragging this one off tencent/hy3. Set this to
+            # "vertex" to put it on Gemini as well.
+            - name: BILLING_APP_PROVIDER
+              value: "openrouter"
+            - name: BILLING_APP_MODEL
+              value: "tencent/hy3"
+            # sales_app is pinned the same way and for the same reason. Both it
+            # and billing_app therefore need the Secret below to be present;
+            # setting these to "vertex" puts them on Gemini with no key.
+            - name: SALES_APP_PROVIDER
+              value: "openrouter"
+            - name: SALES_APP_MODEL
+              value: "tencent/hy3"
+            # optional:true so the pod still starts when the Secret is absent,
+            # which is the normal state on the Vertex path. Note that billing_app
+            # and sales_app are the exceptions: both default to OpenRouter, so
+            # without this Secret those two raise on load while the rest keep
+            # working.
+            # The key is never in this file, the image, or the repo — create it:
+            #   kubectl create secret generic openrouter --from-literal=api-key=YOUR_KEY
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openrouter
+                  key: api-key
+                  optional: true
           resources:
             requests:
               cpu: 300m

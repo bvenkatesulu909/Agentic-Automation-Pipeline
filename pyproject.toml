@@ -34,6 +34,10 @@ adk = [
     # Used directly by the agents' GCP tools for REST calls against Compute,
     # Cloud Billing, and BigQuery.
     "requests>=2.31",
+    # Backs ADK's LiteLlm wrapper, which is how ADK_MODEL_PROVIDER=openrouter
+    # reaches non-Gemini models. Unused on the default Vertex path, but the
+    # import is lazy so it costs nothing there.
+    "litellm>=1.60",
 ]
 
 [project.scripts]
