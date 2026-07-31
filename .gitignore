@@ -19,3 +19,6 @@ dist/
 
 # ADK dev-UI session and artifact storage (recreated on each `adk web` run)
 adk_apps/**/.adk/
+
+# ADK dev-UI scaffold exports (a stub root_agent.yaml that contradicts agent.py)
+adk_apps/**/tmp/
