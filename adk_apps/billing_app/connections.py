@@ -26,6 +26,7 @@ reads that the API happens to model as POST.
 
 from __future__ import annotations
 
+import os
 import threading
 from typing import Any
 
@@ -35,7 +36,11 @@ import requests
 
 # The project whose quota the reads are billed against, and where the billing
 # export dataset would live if one exists.
-HOME_PROJECT = "venkatesh-68cb677e"
+#
+# Overridable: the running identity must hold serviceusage.serviceUsageConsumer
+# on this project or every read returns 403, so a deployment in a second project
+# needs to name its own. The default preserves the original behaviour.
+HOME_PROJECT = os.environ.get("GCP_QUOTA_PROJECT", "venkatesh-68cb677e")
 
 _TIMEOUT = 45
 _creds = None

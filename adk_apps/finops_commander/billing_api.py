@@ -23,6 +23,7 @@ back an absence of data that looks like a measurement.
 
 from __future__ import annotations
 
+import os
 import threading
 from typing import Any
 
@@ -30,7 +31,11 @@ import google.auth
 import google.auth.transport.requests
 import requests
 
-HOME_PROJECT = "venkatesh-68cb677e"
+# Overridable: this is the caller's quota project, and the running identity must
+# hold serviceusage.serviceUsageConsumer on it or every read returns 403. A
+# deployment in a second project has its own identity and needs to name its own.
+# The default preserves the original behaviour.
+HOME_PROJECT = os.environ.get("GCP_QUOTA_PROJECT", "venkatesh-68cb677e")
 BILLING_ACCOUNT = "01C684-F6B291-8B29F3"
 EXPORT_DATASET = "billing_export"
 

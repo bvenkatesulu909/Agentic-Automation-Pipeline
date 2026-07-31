@@ -1,0 +1,127 @@
+# ADK agent apps on GKE Autopilot, in the adk-agents-prod-7f3a project.
+#
+# Separate from k8s/adk-agents.yaml rather than templated from it: the two differ
+# in cluster mode, registry, service account, and quota project, and a single
+# file switching on all four would be harder to read than two explicit ones.
+#
+# Autopilot differences that matter here:
+#
+# * There are no nodes to size, so `resources` is the only thing deciding what
+#   gets provisioned and what it costs. Requests are billed directly.
+# * Autopilot sets limits equal to requests when limits are omitted. The memory
+#   number below is therefore both the guarantee and the ceiling, unlike the
+#   Standard manifest where a 1Gi request could burst to 2500Mi.
+# * Workload Identity is always on and cannot be disabled.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adk-agents
+  annotations:
+    iam.gke.io/gcp-service-account: adk-agents@adk-agents-prod-7f3a.iam.gserviceaccount.com
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adk-agents
+  labels:
+    app: adk-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adk-agents
+  template:
+    metadata:
+      labels:
+        app: adk-agents
+    spec:
+      serviceAccountName: adk-agents
+      containers:
+        - name: adk-agents
+          # Pinned by digest: a tag can be moved, and a pod restart would then
+          # silently pull different code.
+          image: us-central1-docker.pkg.dev/adk-agents-prod-7f3a/adk/adk-agents@sha256:a1ceb0f45218021b26440ca7ace1a5ab5334bbac461bf19fe01b825f31fb254b
+          ports:
+            - containerPort: 8000
+          env:
+            # All apps on Gemini via Workload Identity. No key material anywhere.
+            # To move sales_app and billing_app to OpenRouter/tencent/hy3, create
+            # the Secret and flip the two *_PROVIDER values below to "openrouter":
+            #   kubectl create secret generic openrouter --from-literal=api-key=KEY
+            - name: ADK_MODEL_PROVIDER
+              value: "vertex"
+            - name: OPENROUTER_MODEL
+              value: "tencent/hy3"
+            - name: BILLING_APP_PROVIDER
+              value: "vertex"
+            - name: BILLING_APP_MODEL
+              value: "tencent/hy3"
+            - name: SALES_APP_PROVIDER
+              value: "vertex"
+            - name: SALES_APP_MODEL
+              value: "tencent/hy3"
+            # Vertex calls bill to THIS project, not the original one.
+            - name: GOOGLE_CLOUD_PROJECT
+              value: "adk-agents-prod-7f3a"
+            - name: GOOGLE_CLOUD_LOCATION
+              value: "us-central1"
+            # The quota project for Cloud Billing and SKU catalog reads. This
+            # deployment's identity holds serviceUsageConsumer here and nowhere
+            # else, so leaving the image default (the original project) would
+            # 403 every price lookup. See sales_app/pricing.py.
+            - name: GCP_QUOTA_PROJECT
+              value: "adk-agents-prod-7f3a"
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openrouter
+                  key: api-key
+                  optional: true
+          resources:
+            requests:
+              cpu: "1"
+              # ~1.5 GB for torch plus the embedding model, plus headroom for
+              # concurrent agent runs. Autopilot's general-purpose class accepts
+              # a memory:CPU ratio between 1:1 and 6.5:1, so 3Gi against 1 CPU is
+              # in range; raising memory alone past 6.5Gi would force the CPU up
+              # too and quietly double the bill.
+              memory: 3Gi
+              ephemeral-storage: 2Gi
+          # The embedding model takes ~35s to load before the server answers.
+          # A startup probe with a generous budget stops the kubelet killing the
+          # container mid-load, which a bare liveness probe would do. Autopilot
+          # cold starts are slower than Standard because a node is provisioned on
+          # demand, so this budget is wider than the Standard manifest's.
+          startupProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 30
+            failureThreshold: 4
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adk-agents
+spec:
+  # LoadBalancer provisions a public IP and forwarding rule, billed separately
+  # from the cluster. Switch to ClusterIP and use `kubectl port-forward` if the
+  # endpoint does not need to be reachable from the internet.
+  type: LoadBalancer
+  selector:
+    app: adk-agents
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP

@@ -26,6 +26,7 @@ would couple this app's lifecycle to that one for a few megabytes of cache.
 
 from __future__ import annotations
 
+import os
 import threading
 from typing import Any
 
@@ -36,7 +37,13 @@ import requests
 # Whose quota the catalog reads are billed against. Not the customer's project —
 # the SKU catalog is a public price list, and this only names who pays for the
 # API call.
-HOME_PROJECT = "venkatesh-68cb677e"
+# Overridable because it is the caller's *quota* project, not a data source: the
+# request fails with 403 unless the running identity holds
+# serviceusage.serviceUsageConsumer on whatever this names. A second deployment
+# in another project has its own identity and its own grant, so a value hardcoded
+# to the first project makes every price lookup fail there. The default keeps the
+# original deployment behaving exactly as before.
+HOME_PROJECT = os.environ.get("GCP_QUOTA_PROJECT", "venkatesh-68cb677e")
 
 COMPUTE_SERVICE_ID = "6F81-5844-456A"
 
