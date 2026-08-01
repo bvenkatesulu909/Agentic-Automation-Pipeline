@@ -24,10 +24,13 @@ import os
 from pathlib import Path
 from typing import Any
 
-from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
-from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
-from mcp import StdioServerParameters
-from mcp.client.stdio import get_default_environment
+# NOT imported at module scope. Under RAGSTACK_TRANSPORT=local there is no MCP
+# involved, and this module still gets imported — Agent Engine loads it to
+# resolve the pickled `rag_search` by reference. Importing `mcp` here would make
+# a package the local transport never uses into a hard startup dependency, and a
+# missing one kills the container before logging exists: the only symptom is
+# "failed to start and cannot serve traffic" after a build whose logs end in
+# DONE. Deferred into _mcp_toolset(), which only the mcp transport calls.
 
 # On the Windows dev box ragstack lives in the venv's Scripts directory; in the
 # container it is a console script already on PATH.
@@ -61,16 +64,28 @@ _FORWARD = (
     "HF_HUB_OFFLINE",
     "HF_HUB_DISABLE_TELEMETRY",
 )
-_env = get_default_environment()
-_env.update({k: os.environ[k] for k in _FORWARD if os.environ.get(k)})
 
-def _mcp_toolset() -> McpToolset:
+
+def _stdio_env() -> dict[str, str]:
+    """Build the subprocess environment. Deferred for the same reason as above:
+    `get_default_environment` lives in `mcp.client.stdio`."""
+    from mcp.client.stdio import get_default_environment
+
+    env = get_default_environment()
+    env.update({k: os.environ[k] for k in _FORWARD if os.environ.get(k)})
+    return env
+
+def _mcp_toolset() -> Any:
+    from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+    from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
+    from mcp import StdioServerParameters
+
     return McpToolset(
         connection_params=StdioConnectionParams(
             server_params=StdioServerParameters(
                 command=RAGSTACK_CMD,
                 args=["serve"],
-                env=_env,
+                env=_stdio_env(),
             ),
             # Measured at ~35s for the embedding model to load before the server
             # answers `initialize`. ADK's 5.0 default fails every time.
