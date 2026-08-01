@@ -39,6 +39,13 @@ adk = [
     # import is lazy so it costs nothing there.
     "litellm>=1.60",
 ]
+# Deploying the agents to Vertex AI Agent Engine, the managed ADK runtime. Only
+# needed on the machine that runs the deploy — the agents themselves do not
+# import it, and it is a large dependency tree, so it stays out of `adk` and out
+# of the container image.
+agent-engine = [
+    "google-cloud-aiplatform[agent-engines,adk]>=1.140",
+]
 
 [project.scripts]
 ragstack = "ragstack.cli:main"

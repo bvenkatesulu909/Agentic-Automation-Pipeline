@@ -39,6 +39,25 @@ from sentence_transformers import SentenceTransformer; \
 SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')" \
  && ragstack index
 
+# Offline from here on, and NOT one line earlier: this must come after the step
+# above, which is the one that downloads the model. Setting it in the ENV block
+# at the top fails the build outright — the download it is meant to make
+# unnecessary has not happened yet at that point.
+#
+# Why it is needed at all: disabling telemetry does not stop the update-check
+# HEAD that sentence-transformers issues against huggingface.co when it loads a
+# model. The model is baked in above, so that call can only confirm what is
+# already on disk — but on a cluster with private nodes and no Cloud NAT there is
+# no route out, and it hangs through five retries with backoff on every load.
+# That failure is invisible to probes: the server keeps answering /list-apps, so
+# the pod reads healthy while every retrieval call stalls for ~120s.
+#
+# Note this variable alone is not sufficient. The model loads in the ragstack MCP
+# *subprocess*, and the MCP SDK builds that a minimal environment rather than
+# inheriting this one — see the _FORWARD list in adk_apps/ragstack_mcp_tool.py,
+# without which this setting never reaches the process that needs it.
+ENV HF_HUB_OFFLINE=1
+
 COPY adk_apps ./adk_apps
 
 # Vertex AI via the pod's Workload Identity credentials — no key material here.

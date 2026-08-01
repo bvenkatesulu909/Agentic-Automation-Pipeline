@@ -1,0 +1,159 @@
+# ADK agent apps on autopilot-cluster-143, in the salesagent-504119 project.
+#
+# Third deployment of the same image. What differs between the three is only
+# ever: registry, service account, quota project, and region. Everything that
+# behaves differently is a consequence of those four, which is why these stay as
+# separate readable files rather than one template with four switches.
+#
+# Autopilot, so: no nodes to size, requests are billed directly, limits default
+# to requests when omitted, and Workload Identity is always on.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adk-agents
+  annotations:
+    iam.gke.io/gcp-service-account: adk-agents@salesagent-504119.iam.gserviceaccount.com
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adk-agents
+  labels:
+    app: adk-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adk-agents
+  template:
+    metadata:
+      labels:
+        app: adk-agents
+        # GKE's AI workload label, surfaced in the console's AI/ML views.
+        #
+        # Two things to know about the value:
+        #
+        # * It is a label, not an annotation, so it must match
+        #   [a-zA-Z0-9]([-_.a-zA-Z0-9]*[a-zA-Z0-9])? and cannot contain a
+        #   slash. The OpenRouter id `tencent/hy3` is therefore not usable
+        #   verbatim -- it would be `tencent-hy3`.
+        # * It names what this deployment ACTUALLY calls, which today is
+        #   Gemini: every *_PROVIDER below is "vertex". Change it to
+        #   `tencent-hy3` in the same edit that flips those to "openrouter",
+        #   or the console will report a model nothing is running.
+        #
+        # Note this describes a model these pods CALL, not one they serve.
+        # Nothing is hosted here, so the label is for inventory and filtering
+        # rather than for anything GKE schedules on.
+        ai.gke.io/model: gemini-2.5-flash
+    spec:
+      serviceAccountName: adk-agents
+      containers:
+        - name: adk-agents
+          # Pinned by digest: a tag can be moved, and a pod restart would then
+          # silently pull different code.
+          # v2 — first image where HF_HUB_OFFLINE actually reaches the ragstack
+          # subprocess (see the _FORWARD list in adk_apps/ragstack_mcp_tool.py).
+          # On v1 every rag_search cost ~120s of Hugging Face retries on this
+          # cluster, because its private nodes have no route to the internet.
+          image: us-west1-docker.pkg.dev/salesagent-504119/adk/adk-agents@sha256:889a57e0273df7ec78cad534e8e0d58f51b6b78019c4785de1663b553ee3bc75
+          ports:
+            - containerPort: 8000
+          env:
+            # All apps on Gemini via Workload Identity. No key material anywhere.
+            # To move sales_app and billing_app to OpenRouter/tencent/hy3, create
+            # the Secret and flip the two *_PROVIDER values below to "openrouter":
+            #   kubectl create secret generic openrouter --from-literal=api-key=KEY
+            - name: ADK_MODEL_PROVIDER
+              value: "vertex"
+            - name: OPENROUTER_MODEL
+              value: "tencent/hy3"
+            - name: BILLING_APP_PROVIDER
+              value: "vertex"
+            - name: BILLING_APP_MODEL
+              value: "tencent/hy3"
+            - name: SALES_APP_PROVIDER
+              value: "vertex"
+            - name: SALES_APP_MODEL
+              value: "tencent/hy3"
+            # Vertex calls bill to THIS project. us-west1 matches the cluster, so
+            # model traffic does not cross regions.
+            - name: GOOGLE_CLOUD_PROJECT
+              value: "salesagent-504119"
+            - name: GOOGLE_CLOUD_LOCATION
+              value: "us-west1"
+            # Quota project for Cloud Billing and SKU catalog reads. This
+            # deployment's identity holds serviceUsageConsumer here and nowhere
+            # else, so leaving the image default (the original project) would
+            # 403 every price lookup. See sales_app/pricing.py.
+            - name: GCP_QUOTA_PROJECT
+              value: "salesagent-504119"
+            # This cluster has private nodes and no Cloud NAT, so pods have no
+            # route to the internet. The embedding model is baked into the image
+            # at build time and needs no download -- but sentence-transformers
+            # still issues an update-check HEAD to huggingface.co on load, and
+            # with no egress that hangs through five retries with backoff before
+            # falling back to the cache it already had.
+            #
+            # The symptom is not a crash. /list-apps answers 200 the whole time,
+            # so the pod passes every probe and looks healthy while any agent run
+            # that touches retrieval blocks for minutes and the caller times out.
+            #
+            # Offline mode makes the load read the baked cache directly. Also set
+            # in the Dockerfile; kept here so the behaviour is visible at the
+            # deployment that actually depends on it.
+            - name: HF_HUB_OFFLINE
+              value: "1"
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openrouter
+                  key: api-key
+                  optional: true
+          resources:
+            requests:
+              cpu: "1"
+              # ~1.5 GB for torch plus the embedding model, plus headroom.
+              # Autopilot's general-purpose class accepts a memory:CPU ratio
+              # between 1:1 and 6.5:1, so 3Gi against 1 CPU is in range; raising
+              # memory alone past 6.5Gi would force the CPU up too and quietly
+              # double the bill.
+              memory: 3Gi
+              ephemeral-storage: 2Gi
+          # ~35s for the embedding model to load before the server is useful, on
+          # top of an Autopilot cold start that provisions a node on demand. A
+          # startup probe with this budget stops the kubelet killing the
+          # container mid-load, which a bare liveness probe would do.
+          startupProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /list-apps
+              port: 8000
+            periodSeconds: 30
+            failureThreshold: 4
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adk-agents
+spec:
+  # LoadBalancer provisions a public IP and forwarding rule, billed separately
+  # from the cluster. Switch to ClusterIP and use `kubectl port-forward` if the
+  # endpoint does not need to be reachable from the internet.
+  type: LoadBalancer
+  selector:
+    app: adk-agents
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
