@@ -35,17 +35,16 @@ spec:
         #
         # * It is a label, not an annotation, so it must match
         #   [a-zA-Z0-9]([-_.a-zA-Z0-9]*[a-zA-Z0-9])? and cannot contain a
-        #   slash. The OpenRouter id `tencent/hy3` is therefore not usable
-        #   verbatim -- it would be `tencent-hy3`.
-        # * It names what this deployment ACTUALLY calls, which today is
-        #   Gemini: every *_PROVIDER below is "vertex". Change it to
-        #   `tencent-hy3` in the same edit that flips those to "openrouter",
-        #   or the console will report a model nothing is running.
+        #   slash. The OpenRouter id `inclusionai/ling-3.0-tiny:free` is
+        #   therefore not usable verbatim -- the `/` and `:` both become `-`.
+        # * It names what this deployment ACTUALLY calls. Keep it in step with
+        #   the *_PROVIDER / *_MODEL values below, or the console will report a
+        #   model nothing is running.
         #
         # Note this describes a model these pods CALL, not one they serve.
         # Nothing is hosted here, so the label is for inventory and filtering
         # rather than for anything GKE schedules on.
-        ai.gke.io/model: gemini-2.5-flash
+        ai.gke.io/model: inclusionai-ling-3.0-tiny-free
     spec:
       serviceAccountName: adk-agents
       containers:
@@ -60,22 +59,23 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            # All apps on Gemini via Workload Identity. No key material anywhere.
-            # To move sales_app and billing_app to OpenRouter/tencent/hy3, create
-            # the Secret and flip the two *_PROVIDER values below to "openrouter":
+            # All apps on OpenRouter/inclusionai/ling-3.0-tiny:free. Requires the
+            # Secret referenced by OPENROUTER_API_KEY below to actually exist:
             #   kubectl create secret generic openrouter --from-literal=api-key=KEY
+            # Without it, OPENROUTER_API_KEY is simply absent (the ref is
+            # optional: true) and model_config.get_model raises at pod startup.
             - name: ADK_MODEL_PROVIDER
-              value: "vertex"
+              value: "openrouter"
             - name: OPENROUTER_MODEL
-              value: "tencent/hy3"
+              value: "inclusionai/ling-3.0-tiny:free"
             - name: BILLING_APP_PROVIDER
-              value: "vertex"
+              value: "openrouter"
             - name: BILLING_APP_MODEL
-              value: "tencent/hy3"
+              value: "inclusionai/ling-3.0-tiny:free"
             - name: SALES_APP_PROVIDER
-              value: "vertex"
+              value: "openrouter"
             - name: SALES_APP_MODEL
-              value: "tencent/hy3"
+              value: "inclusionai/ling-3.0-tiny:free"
             # Vertex calls bill to THIS project. us-west1 matches the cluster, so
             # model traffic does not cross regions.
             - name: GOOGLE_CLOUD_PROJECT
