@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Venki News — Live World Desk</title>
+<meta name="description" content="Live world news, every minute, from nineteen wires.">
+<style>
+  :root {
+    --paper:      #FBFAF7;
+    --surface:    #FFFFFF;
+    --surface-2:  #F3F1EC;
+    --line:       #DEDAD1;
+    --line-soft:  #ECE9E2;
+    --text:       #16181D;
+    --text-2:     #565D69;
+    --text-3:     #737B87;
+
+    --bar:        #14161B;
+    --bar-text:   #F4F2EE;
+    --bar-dim:    #9AA1AD;
+    --bar-line:   #2A2E37;
+
+    --breaking:   #B3121F;
+    --breaking-s: #F8DFE1;
+    --major:      #9A5410;
+    --major-s:    #F8E9D6;
+    --developing: #1D5E86;
+    --developing-s:#DDEBF4;
+    --routine:    #4A5260;
+    --routine-s:  #E9EAED;
+    --ok:         #1F6349;
+    --ok-s:       #DCEDE5;
+
+    --f-display: ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --f-body:    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --f-data:    ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+
+    --r: 3px;
+    --pad: clamp(0.9rem, 2.5vw, 1.5rem);
+    --ticker-speed: 60s;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0D1014; --surface: #14181F; --surface-2: #1B212A;
+      --line: #2A313C; --line-soft: #212831;
+      --text: #E9EBEE; --text-2: #A5ADBA; --text-3: #8A93A1;
+      --bar: #080A0D; --bar-text: #F4F2EE; --bar-dim: #8A93A1; --bar-line: #23272F;
+      --breaking: #F26A78; --breaking-s: #33161B;
+      --major: #E09A4A; --major-s: #2E2417;
+      --developing: #62B0DC; --developing-s: #142530;
+      --routine: #98A1AF; --routine-s: #1D222B;
+      --ok: #52B58B; --ok-s: #152A23;
+    }
+  }
+  :root[data-theme="dark"] {
+      --paper: #0D1014; --surface: #14181F; --surface-2: #1B212A;
+      --line: #2A313C; --line-soft: #212831;
+      --text: #E9EBEE; --text-2: #A5ADBA; --text-3: #8A93A1;
+      --bar: #080A0D; --bar-text: #F4F2EE; --bar-dim: #8A93A1; --bar-line: #23272F;
+      --breaking: #F26A78; --breaking-s: #33161B;
+      --major: #E09A4A; --major-s: #2E2417;
+      --developing: #62B0DC; --developing-s: #142530;
+      --routine: #98A1AF; --routine-s: #1D222B;
+      --ok: #52B58B; --ok-s: #152A23;
+  }
+  :root[data-theme="light"] {
+      --paper: #FBFAF7; --surface: #FFFFFF; --surface-2: #F3F1EC;
+      --line: #DEDAD1; --line-soft: #ECE9E2;
+      --text: #16181D; --text-2: #565D69; --text-3: #737B87;
+      --bar: #14161B; --bar-text: #F4F2EE; --bar-dim: #9AA1AD; --bar-line: #2A2E37;
+      --breaking: #B3121F; --breaking-s: #F8DFE1;
+      --major: #9A5410; --major-s: #F8E9D6;
+      --developing: #1D5E86; --developing-s: #DDEBF4;
+      --routine: #4A5260; --routine-s: #E9EAED;
+      --ok: #1F6349; --ok-s: #DCEDE5;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--text);
+    font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  /* ===================== APP BAR ===================== */
+  .appbar {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--bar); color: var(--bar-text);
+    border-bottom: 1px solid var(--bar-line);
+    box-shadow: 0 1px 12px rgba(0,0,0,.18);
+  }
+  .appbar__main {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.6rem var(--pad);
+    max-width: 1500px; margin: 0 auto;
+  }
+  .brand { display: flex; align-items: baseline; gap: .55rem; min-width: 0; }
+  .brand__mark {
+    font-family: var(--f-display); font-weight: 700; font-size: clamp(1.15rem, 3.2vw, 1.6rem);
+    letter-spacing: -.015em; line-height: 1; white-space: nowrap;
+  }
+  .brand__mark em { font-style: normal; color: var(--breaking); }
+  .brand__tag {
+    font-size: .62rem; text-transform: uppercase; letter-spacing: .16em;
+    color: var(--bar-dim); white-space: nowrap;
+  }
+  .appbar__spacer { flex: 1 1 auto; }
+  .appbar__meta {
+    display: flex; align-items: center; gap: .85rem;
+    font-family: var(--f-data); font-size: .72rem; color: var(--bar-dim);
+    white-space: nowrap;
+  }
+  .live {
+    display: inline-flex; align-items: center; gap: .38rem;
+    color: var(--bar-text); letter-spacing: .1em; text-transform: uppercase;
+    font-size: .66rem;
+  }
+  .live__dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--breaking);
+    box-shadow: 0 0 0 0 rgba(179,18,31,.75); animation: pulse 2s infinite;
+  }
+  .live[data-state="stale"] .live__dot { background: var(--major); animation: none; }
+  .live[data-state="down"]  .live__dot { background: var(--routine); animation: none; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(226,60,75,.6); }
+    70%  { box-shadow: 0 0 0 7px rgba(226,60,75,0); }
+    100% { box-shadow: 0 0 0 0 rgba(226,60,75,0); }
+  }
+  .iconbtn {
+    background: transparent; border: 1px solid var(--bar-line); color: var(--bar-dim);
+    border-radius: var(--r); padding: .28rem .5rem; cursor: pointer;
+    font-family: var(--f-data); font-size: .68rem; line-height: 1;
+  }
+  .iconbtn:hover { color: var(--bar-text); border-color: var(--bar-dim); }
+
+  /* ===================== TICKER (in the app bar) ===================== */
+  .ticker {
+    display: flex; align-items: stretch;
+    background: color-mix(in srgb, var(--bar) 82%, #000);
+    border-top: 1px solid var(--bar-line);
+    overflow: hidden;
+  }
+  .ticker__label {
+    flex: 0 0 auto; display: flex; align-items: center; gap: .4rem;
+    background: var(--breaking); color: #fff;
+    padding: 0 .8rem; font-size: .64rem; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase; white-space: nowrap;
+  }
+  .ticker__viewport { flex: 1 1 auto; overflow: hidden; position: relative; }
+  .ticker__viewport::after {
+    content: ""; position: absolute; inset: 0 0 0 auto; width: 3rem; pointer-events: none;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--bar) 82%, #000));
+  }
+  .ticker__track {
+    display: flex; width: max-content;
+    animation: ticker-scroll var(--ticker-speed) linear infinite;
+    will-change: transform;
+  }
+  .ticker:hover .ticker__track,
+  .ticker:focus-within .ticker__track { animation-play-state: paused; }
+  @keyframes ticker-scroll {
+    from { transform: translate3d(0,0,0); }
+    to   { transform: translate3d(-50%,0,0); }
+  }
+  .ticker__item {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .5rem 0; margin-right: 2.2rem;
+    color: var(--bar-text); font-size: .82rem; white-space: nowrap;
+    text-decoration: none;
+  }
+  .ticker__item:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .ticker__pip {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--bar-dim); flex: 0 0 auto;
+  }
+  .ticker__item[data-sev="breaking"] .ticker__pip { background: var(--breaking); }
+  .ticker__item[data-sev="major"] .ticker__pip { background: var(--major); }
+  .ticker__item[data-sev="developing"] .ticker__pip { background: var(--developing); }
+  .ticker__item[data-raw="1"] { color: var(--bar-dim); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ticker__track { animation: none; }
+    .ticker__viewport { overflow-x: auto; scrollbar-width: thin; }
+    .ticker__viewport::after { display: none; }
+  }
+
+  /* ===================== TOOLBAR ===================== */
+  .toolbar {
+    position: sticky; top: var(--appbar-h, 0); z-index: 40;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .toolbar__inner {
+    display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    padding: .5rem var(--pad); max-width: 1500px; margin: 0 auto;
+  }
+  .chipbtn {
+    background: var(--surface); border: 1px solid var(--line); color: var(--text-2);
+    border-radius: 100px; padding: .25rem .7rem; cursor: pointer;
+    font-size: .74rem; font-family: var(--f-body); white-space: nowrap;
+  }
+  .chipbtn:hover { border-color: var(--text-3); color: var(--text); }
+  .chipbtn[aria-pressed="true"] {
+    background: var(--text); border-color: var(--text); color: var(--paper); font-weight: 500;
+  }
+  .toolbar__status {
+    margin-left: auto; display: flex; align-items: center; gap: .8rem;
+    font-family: var(--f-data); font-size: .68rem; color: var(--text-3);
+  }
+  .toolbar__status b { color: var(--text-2); font-weight: 600; }
+
+  /* ===================== LEAD ===================== */
+  main { max-width: 1500px; margin: 0 auto; padding: var(--pad); }
+  .lead {
+    border-left: 3px solid var(--breaking);
+    padding: .1rem 0 .1rem 1rem; margin: .25rem 0 1.5rem;
+  }
+  .lead__kicker {
+    font-size: .64rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--breaking); font-weight: 700;
+  }
+  .lead__text {
+    font-family: var(--f-display); font-size: clamp(1.15rem, 2.6vw, 1.6rem);
+    line-height: 1.3; margin: .25rem 0 0; text-wrap: balance;
+  }
+  .lead:empty { display: none; }
+
+  /* ===================== CARDS ===================== */
+  .grid {
+    display: grid; gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(305px, 1fr));
+  }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+    border-left-width: 3px; border-left-color: var(--routine);
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .card:hover { transform: translateY(-1px); border-color: var(--text-3); }
+  .card[data-sev="breaking"]   { border-left-color: var(--breaking); }
+  .card[data-sev="major"]      { border-left-color: var(--major); }
+  .card[data-sev="developing"] { border-left-color: var(--developing); }
+  .card--lead { grid-column: 1 / -1; }
+  @media (min-width: 900px) {
+    .card--lead { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); }
+    .card--lead .card__figure {
+      height: 100%; min-height: 260px;
+      /* aspect-ratio must go, not just be overridden by height. Left at 16/9 it
+         wins the width calculation -- the figure sizes itself from its own
+         height and spills out of the grid track, and on a 937px card that put
+         619px of photograph into a 499px column, clipping 120px of the lead
+         headline underneath it. */
+      aspect-ratio: auto; min-width: 0;
+    }
+    .card--lead .card__body { padding: 1.25rem; }
+    .card--lead .card__headline { font-size: clamp(1.3rem, 2.4vw, 1.8rem); }
+  }
+
+  .card__figure {
+    position: relative; margin: 0; background: var(--surface-2);
+    aspect-ratio: 16 / 9; overflow: hidden;
+  }
+  .card__figure img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    background: var(--surface-2);
+  }
+  .card__credit {
+    position: absolute; right: 0; bottom: 0;
+    background: rgba(0,0,0,.68); color: #fff;
+    font-family: var(--f-data); font-size: .58rem; letter-spacing: .04em;
+    padding: .18rem .42rem;
+  }
+  .card__body { padding: .85rem .95rem 1rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+  .card__meta {
+    display: flex; align-items: center; gap: .45rem; flex-wrap: wrap;
+    font-family: var(--f-data); font-size: .62rem; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--text-3);
+  }
+  .tag {
+    padding: .12rem .4rem; border-radius: 2px; font-weight: 600;
+    background: var(--routine-s); color: var(--routine);
+  }
+  .tag--breaking   { background: var(--breaking-s); color: var(--breaking); }
+  .tag--major      { background: var(--major-s); color: var(--major); }
+  .tag--developing { background: var(--developing-s); color: var(--developing); }
+  .tag--ok         { background: var(--ok-s); color: var(--ok); }
+  .card__headline {
+    font-family: var(--f-display); font-size: 1.08rem; line-height: 1.28;
+    margin: 0; text-wrap: pretty;
+  }
+  .card__headline a { color: inherit; text-decoration: none; }
+  .card__headline a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .card__dateline {
+    font-family: var(--f-data); font-size: .66rem; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text-3);
+  }
+  .card__body p { margin: 0; font-size: .875rem; color: var(--text-2); }
+  .card__unconfirmed {
+    border-top: 1px dashed var(--line); padding-top: .5rem; margin-top: auto;
+  }
+  .card__unconfirmed h4 {
+    margin: 0 0 .25rem; font-size: .6rem; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--major); font-weight: 700;
+  }
+  .card__unconfirmed ul { margin: 0; padding-left: 1rem; font-size: .78rem; color: var(--text-2); }
+  .card__sources {
+    display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+    font-size: .7rem; color: var(--text-3); margin-top: auto;
+    border-top: 1px solid var(--line-soft); padding-top: .55rem;
+  }
+  .card__sources a { color: var(--text-2); text-decoration: none; }
+  .card__sources a:hover { text-decoration: underline; }
+
+  .empty {
+    border: 1px dashed var(--line); border-radius: var(--r);
+    padding: 2.5rem 1.5rem; text-align: center; color: var(--text-3);
+    font-family: var(--f-data); font-size: .8rem;
+  }
+  footer {
+    max-width: 1500px; margin: 0 auto; padding: 1.5rem var(--pad) 2.5rem;
+    border-top: 1px solid var(--line); color: var(--text-3);
+    font-size: .74rem; line-height: 1.6;
+  }
+  footer code { font-family: var(--f-data); font-size: .92em; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<header class="appbar" id="appbar">
+  <div class="appbar__main">
+    <div class="brand">
+      <span class="brand__mark">VENKI<em>·</em>NEWS</span>
+      <span class="brand__tag" id="date-label">World Desk</span>
+    </div>
+    <div class="appbar__spacer"></div>
+    <div class="appbar__meta">
+      <span class="live" id="live" data-state="down">
+        <span class="live__dot"></span><span id="live-label">connecting</span>
+      </span>
+      <span id="clock">--:--:--</span>
+      <button class="iconbtn" id="theme" type="button" title="Toggle theme">◐</button>
+    </div>
+  </div>
+
+  <!-- The scrolling strip. Duplicated inside the track so the loop is seamless;
+       hidden from assistive tech because every line here is repeated verbatim
+       in the story list below, where it is readable at the reader's own pace. -->
+  <div class="ticker" id="ticker" aria-hidden="true">
+    <div class="ticker__label" id="ticker-label">Live wire</div>
+    <div class="ticker__viewport">
+      <div class="ticker__track" id="ticker-track"></div>
+    </div>
+  </div>
+</header>
+
+<nav class="toolbar" aria-label="Filters and status">
+  <div class="toolbar__inner">
+    <button class="chipbtn" data-region="all" aria-pressed="true" type="button">All regions</button>
+    <button class="chipbtn" data-region="americas" aria-pressed="false" type="button">Americas</button>
+    <button class="chipbtn" data-region="europe" aria-pressed="false" type="button">Europe</button>
+    <button class="chipbtn" data-region="asia_pacific" aria-pressed="false" type="button">Asia-Pacific</button>
+    <button class="chipbtn" data-region="mideast_africa" aria-pressed="false" type="button">Middle East &amp; Africa</button>
+    <div class="toolbar__status" id="status"></div>
+  </div>
+</nav>
+
+<main>
+  <div class="lead" id="lead"></div>
+  <div class="grid" id="grid">
+    <div class="empty">Polling nineteen wires…</div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<script>
+(() => {
+  "use strict";
+
+  const REGION = {
+    americas: "Americas", europe: "Europe", asia_pacific: "Asia-Pacific",
+    mideast_africa: "Middle East & Africa", global: "Global", unrated: "Unsorted"
+  };
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  let state = null;
+  let region = "all";
+  let tickerKey = "";
+  let lastEventAt = 0;
+
+  /* ---------- app bar height drives the sticky toolbar offset ---------- */
+  const syncBarHeight = () => {
+    const h = $("appbar").offsetHeight;
+    document.documentElement.style.setProperty("--appbar-h", h + "px");
+  };
+  addEventListener("resize", syncBarHeight);
+
+  /* ---------- theme ---------- */
+  const savedTheme = localStorage.getItem("venki-theme");
+  if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+  $("theme").addEventListener("click", () => {
+    const cur = document.documentElement.dataset.theme
+      || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("venki-theme", next);
+  });
+
+  /* ---------- clock + liveness ---------- */
+  const tickClock = () => {
+    const now = new Date();
+    $("clock").textContent = now.toLocaleTimeString([], { hour12: false });
+    $("date-label").textContent = now.toLocaleDateString([], {
+      weekday: "short", day: "numeric", month: "short"
+    });
+
+    const live = $("live"), label = $("live-label");
+    const since = lastEventAt ? (Date.now() - lastEventAt) / 1000 : Infinity;
+    const interval = state?.status?.wire_interval_s ?? 60;
+    // Stale before down: a stream that is merely late reads differently from
+    // one that has dropped, and conflating them hides a half-working page.
+    if (since === Infinity)          { live.dataset.state = "down";  label.textContent = "connecting"; }
+    else if (since < interval * 2.5) { live.dataset.state = "live";  label.textContent = "live"; }
+    else if (since < interval * 6)   { live.dataset.state = "stale"; label.textContent = "delayed"; }
+    else                             { live.dataset.state = "down";  label.textContent = "reconnecting"; }
+  };
+  setInterval(tickClock, 1000);
+
+  const ago = (iso) => {
+    if (!iso) return "—";
+    const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 60) return Math.round(s) + "s ago";
+    if (s < 3600) return Math.round(s / 60) + "m ago";
+    return Math.round(s / 3600) + "h ago";
+  };
+
+  /* ---------- the ticker ---------- */
+  function renderTicker(items) {
+    // Rebuilt only when the content actually changed: replacing the DOM restarts
+    // the CSS animation, and a strip that jumps back to the start on every
+    // heartbeat is unreadable.
+    const key = items.map((i) => i.cluster_id + ":" + i.text).join("|");
+    if (key === tickerKey) return;
+    tickerKey = key;
+
+    const track = $("ticker-track");
+    if (!items.length) { track.innerHTML = ""; return; }
+
+    const one = items.map((i) => `
+      <a class="ticker__item" href="#story-${esc(i.cluster_id)}"
+         data-sev="${esc(i.severity)}" data-raw="${i.edited ? 0 : 1}" tabindex="-1">
+        <span class="ticker__pip"></span>${esc(i.text)}
+      </a>`).join("");
+
+    // Two identical copies; the keyframe translates exactly -50%, so the second
+    // copy is under the cursor at the instant the first scrolls out.
+    track.innerHTML = one + one;
+
+    const width = track.scrollWidth / 2;
+    // Constant speed regardless of how many stories are in the strip -- with a
+    // fixed duration, a busy hour scrolls unreadably fast.
+    const PX_PER_SEC = 62;
+    track.style.setProperty("--ticker-speed", Math.max(18, width / PX_PER_SEC) + "s");
+    track.style.animation = "none";
+    void track.offsetWidth;           // force reflow so the restart takes
+    track.style.animation = "";
+  }
+
+  /* ---------- cards ---------- */
+  function card(s, isLead) {
+    const sev = s.severity && s.severity !== "unrated" ? s.severity : "";
+    const tags = [];
+    if (sev) tags.push(`<span class="tag tag--${esc(sev)}">${esc(sev)}</span>`);
+    tags.push(`<span>${esc(REGION[s.region] || s.region)}</span>`);
+    if (s.category && s.category !== "unrated") tags.push(`<span>${esc(s.category)}</span>`);
+
+    const corro = s.outlet_count >= 2
+      ? `<span class="tag tag--ok">${s.outlet_count} sources</span>`
+      : `<span class="tag tag--major">single source</span>`;
+    tags.push(corro);
+    if (!s.edited) tags.push(`<span title="Straight from the wire; no editorial pass yet">unedited wire</span>`);
+    if (s.conflict_note) tags.push(`<span class="tag tag--breaking">sources conflict</span>`);
+
+    const figure = s.image_url ? `
+      <figure class="card__figure">
+        <img src="${esc(s.image_url)}" alt="${esc(s.image_alt || s.headline)}"
+             loading="lazy" decoding="async" referrerpolicy="no-referrer"
+             onerror="this.closest('.card__figure').remove()">
+        ${s.image_credit ? `<figcaption class="card__credit">${esc(s.image_credit)}</figcaption>` : ""}
+      </figure>` : "";
+
+    const unconfirmed = (s.reported_not_confirmed || []).length ? `
+      <div class="card__unconfirmed">
+        <h4>Reported, not confirmed</h4>
+        <ul>${s.reported_not_confirmed.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
+      </div>` : "";
+
+    const conflict = s.conflict_note
+      ? `<div class="card__unconfirmed"><h4>Sources disagree</h4><ul><li>${esc(s.conflict_note)}</li></ul></div>`
+      : "";
+
+    return `
+      <article class="card ${isLead ? "card--lead" : ""}" data-sev="${esc(sev)}"
+               id="story-${esc(s.cluster_id)}">
+        ${figure}
+        <div class="card__body">
+          <div class="card__meta">${tags.join("")}</div>
+          <h2 class="card__headline">
+            <a href="${esc(s.link)}" target="_blank" rel="noopener noreferrer nofollow">${esc(s.headline)}</a>
+          </h2>
+          ${s.dateline ? `<div class="card__dateline">${esc(s.dateline)}</div>` : ""}
+          ${s.body ? `<p>${esc(s.body)}</p>` : ""}
+          ${conflict}${unconfirmed}
+          <div class="card__sources">
+            <span>${esc(ago(s.published_utc))}</span><span>·</span>
+            <span>${esc((s.outlets || []).slice(0, 4).join(", "))}${(s.outlets || []).length > 4 ? " +" + (s.outlets.length - 4) : ""}</span>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  function render() {
+    if (!state) return;
+    const all = state.stories || [];
+    const shown = region === "all" ? all : all.filter((s) => s.region === region);
+
+    $("lead").innerHTML = state.lead && region === "all"
+      ? `<div class="lead__kicker">Top of the hour</div><p class="lead__text">${esc(state.lead)}</p>`
+      : "";
+
+    $("grid").innerHTML = shown.length
+      ? shown.map((s, i) => card(s, i === 0 && region === "all" && !!s.image_url)).join("")
+      : `<div class="empty">No stories from ${esc(REGION[region] || region)} in the current window.</div>`;
+
+    renderTicker(region === "all"
+      ? (state.ticker || [])
+      : (state.ticker || []).filter((t) => shown.some((s) => s.cluster_id === t.cluster_id)));
+
+    const st = state.status || {};
+    $("ticker-label").textContent = st.editorial_enabled ? "Venki live" : "Live wire";
+    $("status").innerHTML = [
+      `<span><b>${st.clusters_tracked ?? 0}</b> stories tracked</span>`,
+      `<span>wire <b>${esc(ago(st.last_tick_utc))}</b></span>`,
+      st.editorial_enabled
+        ? `<span>desk <b>${st.editorial_running ? "running" : (st.editorial_passes || 0) + " passes"}</b></span>`
+        : `<span>desk <b>off</b></span>`,
+      Object.keys(st.feed_errors || {}).length
+        ? `<span title="${esc(Object.entries(st.feed_errors).map(([k, v]) => k + ": " + v).join(" | "))}">
+             <b>${Object.keys(st.feed_errors).length}</b> feeds down</span>`
+        : ``
+    ].join("");
+
+    const lp = st.last_pass;
+    $("footer").innerHTML = `
+      <p><strong>Venki News</strong> polls ${19} public wire feeds every
+      ${esc(st.wire_interval_s ?? 60)}s and clusters the filings into incidents. Cards marked
+      <em>unedited wire</em> are the outlet's own words, unprocessed.
+      ${st.editorial_enabled
+        ? `Everything else has been through a ten-agent editorial pass on
+           <code>${esc(st.provider)}/${esc(st.model)}</code>${lp
+             ? ` — last pass ${lp.approved ? "approved" : "NOT approved"} after
+                 ${esc(lp.review_rounds)} review round(s), ${esc(lp.duration_s)}s,
+                 ${esc(lp.tool_calls)} tool calls${lp.error ? ` (error: ${esc(lp.error)})` : ""}.`
+             : "."}`
+        : `The editorial desk is off — no API key is set, so no model has seen any of this.`}
+      </p>
+      <p>Images are only ever the picture the filing outlet attached to that exact story;
+      a card with no picture is a story whose outlets published none.
+      Some newsroom CDNs refuse hotlinks, and those frames are removed rather than left broken.</p>`;
+
+    tickClock();
+  }
+
+  /* ---------- filters ---------- */
+  document.querySelectorAll(".chipbtn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      region = btn.dataset.region;
+      document.querySelectorAll(".chipbtn").forEach((b) =>
+        b.setAttribute("aria-pressed", String(b === btn)));
+      tickerKey = "";      // force a rebuild: the filtered strip is new content
+      render();
+    });
+  });
+
+  /* ---------- transport ---------- */
+  function apply(data) {
+    state = data;
+    lastEventAt = Date.now();
+    render();
+    syncBarHeight();
+  }
+
+  let es = null;
+  function connect() {
+    if (es) es.close();
+    es = new EventSource("/api/stream");
+    es.onmessage = (e) => { try { apply(JSON.parse(e.data)); } catch (_) {} };
+    // EventSource reconnects on its own, but not after some proxy failures.
+    es.onerror = () => { es.close(); setTimeout(connect, 5000); };
+  }
+  connect();
+
+  // Backstop. A buffering proxy holds the stream open and delivers nothing,
+  // which looks identical to a quiet news hour until you check the clock.
+  setInterval(async () => {
+    if (lastEventAt && Date.now() - lastEventAt < 90_000) return;
+    try { apply(await (await fetch("/api/state", { cache: "no-store" })).json()); } catch (_) {}
+  }, 90_000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && Date.now() - lastEventAt > 60_000) connect();
+  });
+
+  syncBarHeight();
+  tickClock();
+})();
+</script>
+</body>
+</html>

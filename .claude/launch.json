@@ -12,6 +12,22 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8123", "--directory", "dashboard"],
       "port": 8123
+    },
+    {
+      "name": "venki-news",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "venki_news"],
+      "port": 8300
+    },
+    {
+      "name": "dryerp-api",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m", "uvicorn", "dryerp.api.main:app",
+        "--host", "127.0.0.1", "--port", "8400",
+        "--app-dir", "drying-plant-erp/src"
+      ],
+      "port": 8400
     }
   ]
 }

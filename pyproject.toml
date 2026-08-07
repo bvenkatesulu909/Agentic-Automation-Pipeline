@@ -39,6 +39,25 @@ adk = [
     # import is lazy so it costs nothing there.
     "litellm>=1.60",
 ]
+# Venki News — the live world desk in venki_news/. Separate from `adk` because
+# it shares no runtime with the ADK apps: different SDK, different provider,
+# different server. The wire layer needs only httpx and the stdlib XML parser,
+# so a wire-only deployment can install this group and never hold an API key.
+venki = [
+    # The ten-agent newsroom. Floor is the oldest release verified to accept
+    # `output_type` as a strict schema and to type RunContextWrapper the way
+    # tools.py uses it.
+    "openai-agents>=0.19",
+    # Feed polling. Async, because nineteen feeds are polled concurrently on a
+    # 60-second budget and doing it serially spends most of the minute waiting.
+    "httpx>=0.27",
+    # The front page and the SSE stream.
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    # Reads the repo .env, so the desktop launcher picks up an API key without
+    # one having to be exported in whatever shell the shortcut inherits.
+    "python-dotenv>=1.0",
+]
 # Deploying the agents to Vertex AI Agent Engine, the managed ADK runtime. Only
 # needed on the machine that runs the deploy — the agents themselves do not
 # import it, and it is a large dependency tree, so it stays out of `adk` and out
