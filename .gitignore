@@ -22,3 +22,15 @@ adk_apps/**/.adk/
 
 # ADK dev-UI scaffold exports (a stub root_agent.yaml that contradicts agent.py)
 adk_apps/**/tmp/
+
+# Nested git repositories — these are their own repos, not content of this one.
+# Without these lines a `git add .` here would store them as bare gitlinks
+# instead of files.
+sap-abap-pr-approval/
+abapGit/
+abapGit-build/
+Multi-Orchestration-agents/
+drying-plant-erp/
+
+# Reference PDFs kept locally. Large binaries, and not source for this repo.
+*.pdf
