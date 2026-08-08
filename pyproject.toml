@@ -20,8 +20,12 @@ dependencies = [
     "pypdf>=4.0",
     # .env loading in config.py.
     "python-dotenv>=1.0",
-    # Local embeddings; pulls in torch + transformers.
+    # Local embeddings; pulls in torch + transformers + cross-encoder support.
     "sentence-transformers>=3.0",
+    # LangGraph for orchestration workflows.
+    "langgraph>=0.1.0",
+    # SQLite vector search.
+    "sqlite-vec>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -65,9 +69,28 @@ venki = [
 agent-engine = [
     "google-cloud-aiplatform[agent-engines,adk]>=1.140",
 ]
+# Cost-optimized model router with multi-provider support. Enables query-complexity
+# based routing to cheap/expensive models, spend tracking via Prometheus, and an
+# optional FastAPI metrics endpoint. Pull in FastAPI only if you want the
+# /metrics and /router/* endpoints; the core router works without it.
+router = [
+    "litellm>=1.60",
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+]
+# Automated evaluation harness for RAG pipelines. Runs 100+ golden test cases,
+# detects regressions, and tracks quality trends using DeepEval, RAGAS, and LangSmith.
+eval = [
+    "deepeval>=1.0.0",
+    "ragas>=0.1.0",
+    "langsmith>=0.1.0",
+    "click>=8.0",
+]
 
 [project.scripts]
 ragstack = "ragstack.cli:main"
+pdf-qa = "ragstack.pdf_qa.cli:cli"
+eval = "ragstack.eval.cli:cli"
 
 [build-system]
 requires = ["setuptools>=68"]
