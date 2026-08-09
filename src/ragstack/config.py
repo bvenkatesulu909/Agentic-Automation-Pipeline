@@ -73,6 +73,30 @@ OLLAMA_TEMPERATURE = float(os.environ.get("RAGSTACK_OLLAMA_TEMPERATURE", "0.2"))
 
 BACKENDS = ("anthropic", "ollama")
 
+# --- Vector Store --------------------------------------------------------
+# Which vector store backend to use:
+#   numpy    Simple in-memory store (default, for small corpora)
+#   qdrant   Production store with HNSW, hybrid search, backups
+VECTOR_STORE_BACKEND = os.environ.get("RAGSTACK_VECTOR_STORE_BACKEND", "qdrant").lower()
+
+# Qdrant configuration
+QDRANT_URL = os.environ.get("RAGSTACK_QDRANT_URL")  # Remote: http://localhost:6333
+QDRANT_API_KEY = os.environ.get("RAGSTACK_QDRANT_API_KEY")
+QDRANT_COLLECTION = os.environ.get("RAGSTACK_QDRANT_COLLECTION", "ragstack")
+QDRANT_VECTOR_SIZE = int(os.environ.get("RAGSTACK_QDRANT_VECTOR_SIZE", "384"))
+
+# Hybrid search weights (0-1, should sum to 1.0)
+HYBRID_SEMANTIC_WEIGHT = float(os.environ.get("RAGSTACK_HYBRID_SEMANTIC_WEIGHT", "0.7"))
+HYBRID_KEYWORD_WEIGHT = float(os.environ.get("RAGSTACK_HYBRID_KEYWORD_WEIGHT", "0.3"))
+
+# Embedding cache
+EMBEDDING_CACHE_SIZE = int(os.environ.get("RAGSTACK_EMBEDDING_CACHE_SIZE", "10000"))
+EMBEDDING_CACHE_PERSIST = os.environ.get("RAGSTACK_EMBEDDING_CACHE_PERSIST", "true").lower() == "true"
+
+# Backup policy
+BACKUP_MAX_BACKUPS = int(os.environ.get("RAGSTACK_BACKUP_MAX_BACKUPS", "10"))
+BACKUP_RETENTION_DAYS = int(os.environ.get("RAGSTACK_BACKUP_RETENTION_DAYS", "30"))
+
 
 def model_for(backend: str | None = None) -> str:
     """The model id the given backend will actually use."""
