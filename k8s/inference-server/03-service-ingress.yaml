@@ -1,0 +1,193 @@
+---
+# Service: Internal load balancing across inference server pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-server
+  namespace: default
+  labels:
+    app: inference-server
+  annotations:
+    description: "Load balanced service for vLLM inference pods"
+spec:
+  type: ClusterIP
+  selector:
+    app: inference-server
+  # Session affinity: optional, uncomment to route same client to same pod
+  # sessionAffinity: ClientIP
+  # sessionAffinityConfig:
+  #   clientIP:
+  #     timeoutSeconds: 10800  # 3 hours
+  ports:
+  - name: api
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 8265
+    targetPort: 8265
+    protocol: TCP
+  # Load balancing strategy
+  internalTrafficPolicy: Local  # Prefer pods on the same node to reduce latency
+
+---
+# Headless Service for direct pod access (if needed for debugging)
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-server-headless
+  namespace: default
+  labels:
+    app: inference-server
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless
+  selector:
+    app: inference-server
+  ports:
+  - name: api
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+
+---
+# NetworkPolicy: restrict traffic to inference server
+# Only allow from application pods and monitoring
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: inference-server-netpol
+  namespace: default
+  labels:
+    app: inference-server
+spec:
+  podSelector:
+    matchLabels:
+      app: inference-server
+  policyTypes:
+  - Ingress
+  - Egress
+  # Allow ingress from specific namespaces/pods
+  ingress:
+  # Allow from saas_agent pods
+  - from:
+    - podSelector:
+        matchLabels:
+          app: saas-agent
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow from Prometheus for metrics
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8265
+  # Allow from localhost (health checks)
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Egress: allow to external services
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow to HuggingFace model hub (for model downloads if needed)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow to Kubernetes DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# Ingress: external access to inference server (optional, if needed)
+# For GKE, you might use a Google Cloud Load Balancer instead
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: inference-server
+  namespace: default
+  labels:
+    app: inference-server
+  annotations:
+    # GKE-specific annotations
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "inference-server-ip"
+    # Rate limiting (GKE Cloud Armor)
+    cloud.google.com/armor-config: |
+      {
+        "rules": [
+          {
+            "priority": 1000,
+            "action": "rate-based-ban",
+            "preview": false,
+            "rate_limit_options": {
+              "conform_action": "allow",
+              "exceed_action": "deny-429",
+              "rate_limit_threshold": {
+                "count": 100,
+                "interval_sec": 60
+              },
+              "ban_duration_sec": 600
+            }
+          }
+        ]
+      }
+spec:
+  rules:
+  - host: "inference.yourdomain.com"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: inference-server
+            port:
+              number: 8000
+  tls:
+  - hosts:
+    - "inference.yourdomain.com"
+    secretName: inference-tls-cert
+
+---
+# ServiceMonitor: expose metrics to Prometheus
+# Requires prometheus-operator to be installed
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: inference-server
+  namespace: default
+  labels:
+    app: inference-server
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: inference-server
+  endpoints:
+  - port: metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    relabelings:
+    # Add pod labels to metrics
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: namespace

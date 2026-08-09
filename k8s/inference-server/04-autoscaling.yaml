@@ -1,0 +1,159 @@
+---
+# Horizontal Pod Autoscaler: automatically scale based on metrics
+# Scales from 2 (min) to 10 (max) replicas
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inference-server-hpa
+  namespace: default
+  labels:
+    app: inference-server
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inference-server
+  minReplicas: 2  # Always have at least 2 for HA
+  maxReplicas: 10  # Cap at 10 to control costs
+  metrics:
+  # Scale on CPU usage
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80  # Scale up if >80% CPU
+  # Scale on memory usage
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80  # Scale up if >80% memory
+  # Scale on custom metrics (requires Prometheus)
+  - type: Pods
+    pods:
+      metric:
+        name: inference_queue_size
+      target:
+        type: AverageValue
+        averageValue: "10"  # Scale up if avg queue > 10 requests
+  behavior:
+    # Scale-up behavior: aggressive
+    scaleUp:
+      stabilizationWindowSeconds: 60  # Wait 60s after last scale-up
+      policies:
+      - type: Percent
+        value: 50  # Increase by 50% (min 1 pod)
+        periodSeconds: 60
+      - type: Pods
+        value: 1  # Add 1 pod minimum
+        periodSeconds: 60
+      selectPolicy: Max  # Use the policy that scales up the most
+    # Scale-down behavior: conservative (prevent thrashing)
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Wait 5 minutes before scale-down
+      policies:
+      - type: Percent
+        value: 25  # Decrease by 25%
+        periodSeconds: 60
+      - type: Pods
+        value: 1  # Remove 1 pod minimum
+        periodSeconds: 60
+      selectPolicy: Min  # Use the policy that scales down the least
+
+---
+# VerticalPodAutoscaler: automatically right-size CPU/memory requests
+# Optional but recommended for optimal resource allocation
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: inference-server-vpa
+  namespace: default
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inference-server
+  updatePolicy:
+    updateMode: "Auto"  # Automatically apply recommendations
+  resourcePolicy:
+    containerPolicies:
+    - containerName: vllm-server
+      minAllowed:
+        cpu: "4"
+        memory: "48Gi"
+      maxAllowed:
+        cpu: "16"
+        memory: "128Gi"
+      # Prevent drastic changes
+      controlledValues: [RequestsAndLimits]
+
+---
+# PrometheusRule: alerts for inference server issues
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: inference-server-alerts
+  namespace: default
+  labels:
+    app: inference-server
+    prometheus: kube-prometheus
+spec:
+  groups:
+  - name: inference-server.rules
+    interval: 30s
+    rules:
+    # Alert: High queue size (more than 50 pending requests)
+    - alert: InferenceServerHighQueueSize
+      expr: inference_queue_size > 50
+      for: 5m
+      annotations:
+        summary: "Inference server queue is high"
+        description: "Queue has {{ $value }} pending requests"
+
+    # Alert: High error rate
+    - alert: InferenceServerHighErrorRate
+      expr: |
+        (rate(inference_errors_total[5m]) / rate(inference_requests_total[5m])) > 0.05
+      for: 5m
+      annotations:
+        summary: "Inference server error rate is high (>5%)"
+        description: "Error rate: {{ $value | humanizePercentage }}"
+
+    # Alert: p99 latency too high
+    - alert: InferenceServerHighP99Latency
+      expr: histogram_quantile(0.99, rate(inference_duration_seconds_bucket[5m])) > 5
+      for: 5m
+      annotations:
+        summary: "Inference server p99 latency is high (>5s)"
+        description: "p99 latency: {{ $value }}s"
+
+    # Alert: GPU cache filling up
+    - alert: InferenceServerHighGPUCacheUsage
+      expr: gpu_cache_usage_percent > 90
+      for: 2m
+      annotations:
+        summary: "GPU cache usage is high (>90%)"
+        description: "Cache usage: {{ $value }}%"
+
+    # Alert: Pod crashes
+    - alert: InferenceServerPodCrashing
+      expr: |
+        rate(kube_pod_container_status_restarts_total{pod=~"inference-server-.*"}[15m]) > 0
+      for: 1m
+      annotations:
+        summary: "Inference server pod is restarting"
+        description: "Pod {{ $labels.pod }} is restarting"
+
+---
+# GKE-specific: Workload Identity binding
+# This allows the inference server to authenticate to GCP services
+apiVersion: iam.cnpg.io/v1
+kind: ServiceAccountBinding
+metadata:
+  name: inference-server-gke-binding
+  namespace: default
+spec:
+  serviceAccount: inference-server
+  googleServiceAccount: inference-server@your-project.iam.gserviceaccount.com

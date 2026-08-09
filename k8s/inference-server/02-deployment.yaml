@@ -1,0 +1,224 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference-server
+  namespace: default
+  labels:
+    app: inference-server
+    version: v1
+  annotations:
+    description: "vLLM inference server with continuous batching and PagedAttention"
+spec:
+  replicas: 2  # Minimum 2 for HA, HPA will scale up to 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Always keep at least 1 replica
+  selector:
+    matchLabels:
+      app: inference-server
+  template:
+    metadata:
+      labels:
+        app: inference-server
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8265"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: inference-server
+      automountServiceAccountToken: true
+
+      # Pod affinity for better resource distribution
+      affinity:
+        podAntiAffinity:
+          # Prefer not to place on the same node
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - inference-server
+              topologyKey: kubernetes.io/hostname
+
+      # Tolerations for GPU nodes
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+
+      # Init container: Pre-warm the GPU
+      initContainers:
+      - name: gpu-warmup
+        image: nvidia/cuda:12.1.0-runtime-ubuntu22.04
+        command:
+        - sh
+        - -c
+        - |
+          echo "Checking NVIDIA GPU availability..."
+          nvidia-smi
+          echo "GPU warmup complete"
+        resources:
+          requests:
+            nvidia.com/gpu: 1
+          limits:
+            nvidia.com/gpu: 1
+
+      # Main inference server container
+      containers:
+      - name: vllm-server
+        image: us.gcr.io/your-project/inference-server:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: api
+          containerPort: 8000
+          protocol: TCP
+        - name: metrics
+          containerPort: 8265
+          protocol: TCP
+
+        # Environment variables from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: inference-server-config
+        - configMapRef:
+            name: model-cache-config
+
+        # Additional environment variables (secrets should use Sealed Secrets)
+        env:
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: "compute,utility"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        # Pod metadata for better logging
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        # Resource requests and limits
+        # Request: what Kubernetes guarantees for scheduling
+        # Limit: maximum the container can use
+        resources:
+          requests:
+            # CPU: 8 cores for token processing
+            cpu: "8"
+            # Memory: 96GB for model + overhead
+            memory: "96Gi"
+            # GPU: 1 A100 80GB
+            nvidia.com/gpu: "1"
+          limits:
+            # Don't let a single pod consume more than requested
+            cpu: "12"
+            memory: "128Gi"
+            nvidia.com/gpu: "1"
+
+        # Startup probe: wait for model loading (up to 5 minutes)
+        # vLLM takes time to load large models into VRAM
+        startupProbe:
+          httpGet:
+            path: /health
+            port: api
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30  # 30 * 10s = 5 minutes max
+
+        # Liveness probe: detect hung processes
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: api
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3  # Restart after 3 failures (90s)
+
+        # Readiness probe: detect when server is overloaded
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: api
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 2  # Remove from service after 2 failures (20s)
+
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        # Volume mounts
+        volumeMounts:
+        # Model cache directory (shared across replicas via NFS or GCS)
+        - name: model-cache
+          mountPath: /home/vllm/.cache
+          readOnly: false
+        # Logs volume
+        - name: logs
+          mountPath: /app/logs
+          readOnly: false
+        # Temp directory for vLLM scratch space
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+
+      # Volumes
+      volumes:
+      # Persistent model cache (can be NFS, GCS, or local)
+      # Using local for performance, but requires model pre-downloaded
+      - name: model-cache
+        emptyDir:
+          sizeLimit: 150Gi  # Enough for 70B model + overhead
+      # Ephemeral log storage
+      - name: logs
+        emptyDir:
+          sizeLimit: 10Gi
+      # Temp space for vLLM processing
+      - name: tmp
+        emptyDir:
+          sizeLimit: 50Gi
+
+      # Pod termination grace period
+      # Allow current requests to complete before killing pod
+      terminationGracePeriodSeconds: 60
+
+      # DNS policy for reliable service discovery
+      dnsPolicy: ClusterFirst
+
+---
+# PodDisruptionBudget: ensure minimum availability during node maintenance
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: inference-server-pdb
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: inference-server

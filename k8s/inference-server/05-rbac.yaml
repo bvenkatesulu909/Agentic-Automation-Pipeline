@@ -1,0 +1,85 @@
+---
+# ServiceAccount for inference server pods
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: inference-server
+  namespace: default
+  labels:
+    app: inference-server
+
+---
+# ClusterRole: permissions for the inference server
+# Minimal RBAC for security
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: inference-server
+  labels:
+    app: inference-server
+rules:
+# Read own pod information (for pod name/namespace env vars)
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+# Read configuration maps
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+# Read secrets (if using sealed-secrets)
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+
+---
+# ClusterRoleBinding: bind the role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: inference-server
+  labels:
+    app: inference-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: inference-server
+subjects:
+- kind: ServiceAccount
+  name: inference-server
+  namespace: default
+
+---
+# Role: namespace-scoped permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: inference-server
+  namespace: default
+  labels:
+    app: inference-server
+rules:
+# Prometheus scraping
+- apiGroups: [""]
+  resources: ["endpoints", "services", "pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+
+---
+# RoleBinding: bind namespace role to service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: inference-server
+  namespace: default
+  labels:
+    app: inference-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: inference-server
+subjects:
+- kind: ServiceAccount
+  name: inference-server
+  namespace: default

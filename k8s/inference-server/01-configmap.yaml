@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inference-server-config
+  namespace: default
+  labels:
+    app: inference-server
+    version: v1
+data:
+  # Model configuration
+  MODEL_NAME: "meta-llama/Llama-2-70b-hf"
+  DTYPE: "float16"
+  TRUST_REMOTE_CODE: "true"
+
+  # GPU memory optimization
+  # PagedAttention splits KV cache into fixed-size blocks
+  GPU_MEMORY_UTILIZATION: "0.95"      # Use 95% of available VRAM
+  BLOCK_SIZE: "16"                    # 16 tokens per block (default)
+  SWAP_SPACE_BYTES: "4000000000"      # 4GB CPU swap for overflow
+
+  # Continuous batching configuration
+  # Allows multiple requests in different stages of processing
+  MAX_NUM_SEQS: "256"                 # Max parallel requests
+  MAX_TOKENS_BATCHED: "8192"          # Batch up to 8K tokens
+  MAX_MODEL_LEN: "4096"               # Max sequence length
+
+  # Quantization for memory efficiency
+  # AWQ: Activation-aware Weight Quantization (4-bit)
+  # Reduces 70B model from 140GB to ~18GB with minimal quality loss
+  QUANTIZATION: "awq"
+  LOAD_FORMAT: "auto"
+
+  # Fairness and scheduling
+  # LPMM (Longest Processed Max-Multiplicity) prevents starvation
+  # Preemption mode: recompute (fair) vs swap (faster but uses CPU memory)
+
+  # Request queueing
+  MAX_WAITING_REQUESTS: "1000"        # Max pending requests
+
+  # Distributed serving (if needed)
+  TENSOR_PARALLEL_SIZE: "1"           # 1 for single GPU, N for tensor parallelism
+
+  # Logging
+  LOG_LEVEL: "INFO"
+
+  # Kubernetes-specific
+  VLLM_ATTENTION_BACKEND: "paged_attention"
+  TOKENIZERS_PARALLELISM: "false"
+  PYTHONUNBUFFERED: "1"
+
+---
+# ConfigMap for model cache configuration
+# Stores model weights in GCS/S3, mounts in pod
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: model-cache-config
+  namespace: default
+  labels:
+    app: inference-server
+data:
+  # Model repository (HuggingFace Hub)
+  HF_MODEL_ID: "meta-llama/Llama-2-70b-hf"
+  # Cache location in pod
+  HF_HOME: "/home/vllm/.cache"
+  # Optional: Private model access
+  # HF_TOKEN: "<your-token>"
