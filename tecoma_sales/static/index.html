@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TECOMA Drying Technology — Sales Desk</title>
+<style>
+/* ===================================================================
+   Design tokens. Dark by default, light when the viewer's OS asks.
+   =================================================================== */
+:root{
+  --bg:#0a0c10; --bg-2:#0e1218;
+  --surface:#13171e; --surface-2:#181d26; --surface-3:#1e242f;
+  --line:#242b36; --line-soft:#1b212a;
+  --ink:#f0f3f8; --ink-2:#98a4b6; --ink-3:#68727f;
+  --accent:#ff8a1f; --accent-2:#ffb45e; --accent-soft:#ff8a1f1a;
+  --hot:#ff6b7a; --warm:#ffb45e; --cool:#6ea8ff; --good:#3fc79a;
+  --shadow:0 1px 2px #0006, 0 12px 32px -12px #0009;
+  --r:14px; --r-sm:9px;
+  --maxw:1560px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f6f9; --bg-2:#eef1f6;
+    --surface:#ffffff; --surface-2:#f7f9fc; --surface-3:#eef2f7;
+    --line:#dfe5ed; --line-soft:#eaeff5;
+    --ink:#0f141b; --ink-2:#5a6675; --ink-3:#8a95a4;
+    --accent:#d96a00; --accent-2:#b85a00; --accent-soft:#d96a0014;
+    --hot:#d1394a; --warm:#b87400; --cool:#2f6fd0; --good:#0f8f68;
+    --shadow:0 1px 2px #0f141b0a, 0 12px 28px -14px #0f141b26;
+  }
+}
+*,*::before,*::after{ box-sizing:border-box; }
+html{ -webkit-text-size-adjust:100%; }
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.6 ui-sans-serif,"Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased; font-synthesis:none;
+}
+.mono{ font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;
+       font-variant-numeric:tabular-nums; }
+h1,h2,h3{ margin:0; letter-spacing:-0.02em; line-height:1.2; }
+.eyebrow{ font-size:11px; font-weight:700; letter-spacing:.14em;
+          text-transform:uppercase; color:var(--ink-3); }
+
+/* ===================== masthead ===================== */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  background:color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter:saturate(160%) blur(14px);
+  border-bottom:1px solid var(--line-soft);
+}
+.topbar-in{
+  max-width:var(--maxw); margin:0 auto; padding:14px 28px;
+  display:flex; align-items:center; gap:16px;
+}
+.logo{ display:flex; align-items:center; gap:11px; }
+.logo .glyph{
+  width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--accent),#e0490c);
+  box-shadow:0 4px 14px -4px #ff8a1f80; flex:none;
+}
+.logo .glyph svg{ display:block; }
+.logo .name{ font-size:16px; font-weight:750; letter-spacing:-0.01em; }
+.logo .sub{ font-size:11px; color:var(--ink-3); letter-spacing:.04em; margin-top:-2px; }
+.status{
+  margin-left:auto; display:flex; align-items:center; gap:9px; font-size:12.5px;
+  color:var(--ink-2); border:1px solid var(--line); border-radius:99px;
+  padding:6px 14px 6px 11px; background:var(--surface);
+}
+.dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-3); flex:none; }
+.dot.on{ background:var(--good); box-shadow:0 0 0 0 #3fc79a80; animation:pulse 2.4s infinite; }
+@keyframes pulse{ 70%{box-shadow:0 0 0 7px #3fc79a00;} 100%{box-shadow:0 0 0 0 #3fc79a00;} }
+
+/* ===================== hero ===================== */
+.hero{ position:relative; overflow:hidden;
+       border-bottom:1px solid var(--line-soft);
+       background:linear-gradient(180deg,var(--bg-2),var(--bg)); }
+.hero::before{
+  content:""; position:absolute; inset:-40% 45% auto -10%; height:520px;
+  background:radial-gradient(closest-side,#ff8a1f22,transparent 72%);
+  pointer-events:none;
+}
+.hero-in{
+  position:relative; max-width:var(--maxw); margin:0 auto;
+  padding:44px 28px 34px; display:grid; gap:36px;
+  grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); align-items:center;
+}
+.hero h1{ font-size:clamp(27px,3.1vw,40px); font-weight:730; margin:12px 0 12px;
+          max-width:19ch; }
+.hero h1 em{ font-style:normal; color:var(--accent); }
+.hero p.lede{ color:var(--ink-2); font-size:15.5px; max-width:56ch; margin:0; }
+.sectors{ display:flex; flex-wrap:wrap; gap:7px; margin-top:20px; }
+.sector{ font-size:12px; color:var(--ink-2); border:1px solid var(--line);
+         background:var(--surface); padding:4px 11px; border-radius:99px; }
+
+/* roster of agent faces */
+.roster{ display:flex; align-items:center; gap:0; margin-top:26px; }
+.roster .face{
+  width:38px; height:38px; border-radius:11px; display:grid; place-items:center;
+  font-size:17px; background:var(--surface-2); border:1px solid var(--line);
+  margin-right:-8px; transition:transform .16s ease, margin .16s ease;
+  cursor:default; position:relative; box-shadow:var(--shadow);
+}
+.roster .face:hover{ transform:translateY(-4px); z-index:5; }
+.roster .face .tip{
+  position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:var(--surface-3); border:1px solid var(--line); border-radius:8px;
+  padding:6px 10px; font-size:11.5px; white-space:nowrap; opacity:0;
+  pointer-events:none; transition:opacity .14s; box-shadow:var(--shadow); z-index:6;
+}
+.roster .face:hover .tip{ opacity:1; }
+.roster .count{ margin-left:20px; font-size:12.5px; color:var(--ink-3); }
+
+/* headline figures */
+.figures{ display:grid; grid-template-columns:1fr 1fr; gap:1px;
+          background:var(--line-soft); border:1px solid var(--line);
+          border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
+.figure{ background:var(--surface); padding:20px 22px; }
+.figure .v{ font-size:clamp(22px,2.5vw,31px); font-weight:730; letter-spacing:-0.03em;
+            font-variant-numeric:tabular-nums; line-height:1.1; }
+.figure .l{ font-size:11px; font-weight:700; letter-spacing:.12em;
+            text-transform:uppercase; color:var(--ink-3); margin-top:7px; }
+.figure .n{ font-size:12px; color:var(--ink-2); margin-top:4px; }
+.figure.accent .v{ color:var(--accent); }
+
+@media (max-width:1080px){
+  .hero-in{ grid-template-columns:1fr; padding:32px 20px 26px; gap:26px; }
+}
+
+/* ===================== layout ===================== */
+.work{ max-width:var(--maxw); margin:0 auto; padding:24px 28px 48px;
+       display:grid; grid-template-columns:396px minmax(0,1fr); gap:20px;
+       align-items:start; }
+@media (max-width:1180px){ .work{ grid-template-columns:1fr; padding:20px; } }
+
+.card{ background:var(--surface); border:1px solid var(--line);
+       border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
+.card-head{ padding:16px 20px 14px; border-bottom:1px solid var(--line-soft); }
+.card-head h2{ font-size:16px; font-weight:680; }
+.card-head p{ margin:5px 0 0; font-size:12.5px; color:var(--ink-3); }
+.card-body{ padding:18px 20px; }
+
+/* segmented navigation */
+.seg{ display:flex; gap:2px; padding:4px; margin:12px 20px 0;
+      background:var(--surface-2); border:1px solid var(--line-soft);
+      border-radius:11px; overflow-x:auto; scrollbar-width:none; }
+.seg::-webkit-scrollbar{ display:none; }
+.seg .s{ flex:1; white-space:nowrap; text-align:center; padding:8px 14px;
+         font-size:13px; font-weight:560; color:var(--ink-2); border-radius:8px;
+         cursor:pointer; transition:background .14s,color .14s; }
+.seg .s:hover{ color:var(--ink); }
+.seg .s.active{ background:var(--surface); color:var(--ink);
+                box-shadow:0 1px 2px #0003; }
+@media (prefers-color-scheme: light){ .seg .s.active{ box-shadow:0 1px 3px #0f141b1f; } }
+.tabpane{ display:none; } .tabpane.active{ display:block; }
+
+/* ===================== forms ===================== */
+.group-title{ font-size:10.5px; font-weight:750; letter-spacing:.13em;
+              text-transform:uppercase; color:var(--accent);
+              margin:22px 0 11px; padding-bottom:7px;
+              border-bottom:1px solid var(--line-soft); }
+.group-title:first-child{ margin-top:0; }
+.field{ margin-bottom:13px; }
+.field label{ display:block; font-size:12.5px; font-weight:540; color:var(--ink-2);
+              margin-bottom:5px; }
+.field .unit{ color:var(--ink-3); font-weight:400; }
+.field .req{ color:var(--accent); }
+.field .help{ font-size:11.5px; color:var(--ink-3); margin-top:5px; line-height:1.45; }
+input[type=text],input[type=number],select,textarea{
+  width:100%; background:var(--surface-2); border:1px solid var(--line);
+  color:var(--ink); border-radius:var(--r-sm); padding:9px 11px; font:inherit;
+  font-size:14px; outline:none; transition:border-color .14s, box-shadow .14s;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);
+  background:var(--surface);
+}
+textarea{ min-height:70px; resize:vertical; }
+.checkline{ display:flex; align-items:flex-start; gap:10px;
+            padding:9px 11px; border:1px solid var(--line-soft);
+            border-radius:var(--r-sm); background:var(--surface-2); }
+.checkline input{ width:16px; height:16px; margin:2px 0 0; accent-color:var(--accent);
+                  flex:none; }
+.checkline label{ margin:0; color:var(--ink); font-size:13.5px; font-weight:450; }
+
+button{ background:var(--accent); color:#fff; border:0; border-radius:var(--r-sm);
+        padding:11px 18px; font:600 14px/1 inherit; cursor:pointer;
+        transition:filter .14s, transform .06s; letter-spacing:-0.01em; }
+button:hover{ filter:brightness(1.08); }
+button:active{ transform:translateY(1px); }
+button:disabled{ opacity:.5; cursor:not-allowed; }
+button.ghost{ background:transparent; color:var(--ink-2); border:1px solid var(--line); }
+button.ghost:hover{ color:var(--ink); border-color:var(--accent); filter:none; }
+button.sm{ padding:7px 12px; font-size:12.5px; }
+.actions{ display:flex; gap:9px; margin-top:20px; padding-top:18px;
+          border-top:1px solid var(--line-soft); flex-wrap:wrap; }
+.actions button:first-child{ flex:1; min-width:170px; }
+
+/* ===================== live wall ===================== */
+.wallbar{ display:flex; align-items:center; gap:10px; padding:11px 20px;
+          border-bottom:1px solid var(--line-soft); background:var(--surface-2); }
+.wallbar .ctx{ font-size:12.5px; color:var(--ink-2); display:flex;
+               align-items:center; gap:8px; min-width:0; }
+.wallbar .ctx b{ color:var(--ink); font-weight:600; }
+#wall{ max-height:min(64vh,720px); overflow-y:auto; padding:6px 20px 16px; }
+.msg{ display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--line-soft);
+      animation:rise .26s cubic-bezier(.2,.7,.3,1); }
+@keyframes rise{ from{ opacity:0; transform:translateY(7px); } }
+.msg .av{ width:32px; height:32px; border-radius:9px; flex:none; display:grid;
+          place-items:center; font-size:16px; background:var(--surface-2);
+          border:1px solid var(--line); }
+.msg .hd{ display:flex; gap:9px; align-items:baseline; flex-wrap:wrap; }
+.msg .who{ font-weight:640; font-size:13.5px; letter-spacing:-0.01em; }
+.msg .arrow{ color:var(--ink-3); font-size:12.5px; }
+.msg .intent{ font-size:11px; color:var(--ink-3); font-family:ui-monospace,Consolas,monospace;
+              background:var(--surface-2); border:1px solid var(--line-soft);
+              padding:1px 7px; border-radius:5px; }
+.msg .ts{ margin-left:auto; font-size:11px; color:var(--ink-3);
+          font-variant-numeric:tabular-nums; }
+.msg .text{ margin-top:4px; font-size:13.5px; }
+.msg.reply .text{ color:var(--ink-2); }
+.msg.challenge{ margin:0 -20px; padding:12px 20px; background:#ff6b7a10;
+                border-left:3px solid var(--hot); }
+.msg.challenge .text{ color:var(--hot); font-weight:520; }
+.msg.broadcast{ margin:0 -20px; padding:12px 20px; background:var(--accent-soft);
+                border-left:3px solid var(--accent); }
+.msg.broadcast .text{ color:var(--accent-2); font-weight:560; }
+.msg.error .text{ color:var(--hot); }
+.payload{ margin-top:8px; }
+.payload summary{ cursor:pointer; font-size:11.5px; color:var(--ink-3);
+                  user-select:none; }
+.payload summary:hover{ color:var(--accent); }
+.payload pre{ background:var(--surface-2); border:1px solid var(--line-soft);
+              border-radius:8px; padding:11px; overflow:auto; font-size:11.5px;
+              color:var(--ink-2); max-height:300px; margin:7px 0 0; }
+
+/* ===================== data displays ===================== */
+.kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr));
+       gap:1px; background:var(--line-soft); border-bottom:1px solid var(--line-soft); }
+.kpi{ background:var(--surface); padding:16px 18px; }
+.kpi .v{ font-size:23px; font-weight:700; letter-spacing:-0.03em;
+         font-variant-numeric:tabular-nums; }
+.kpi .l{ font-size:10.5px; font-weight:700; letter-spacing:.11em;
+         text-transform:uppercase; color:var(--ink-3); margin-top:5px; }
+.split{ display:grid; grid-template-columns:1fr 1fr; }
+.split > div + div{ border-left:1px solid var(--line-soft); }
+@media (max-width:760px){ .split{ grid-template-columns:1fr; }
+  .split > div + div{ border-left:0; border-top:1px solid var(--line-soft); } }
+.sec-head{ padding:13px 20px; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+           text-transform:uppercase; color:var(--ink-3);
+           border-bottom:1px solid var(--line-soft); background:var(--surface-2); }
+table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+th{ text-align:left; font-size:10.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-3); padding:11px 18px;
+    border-bottom:1px solid var(--line-soft); background:var(--surface-2);
+    position:sticky; top:0; }
+td{ padding:12px 18px; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+tbody tr:last-child td{ border-bottom:0; }
+tr.clickable:hover{ background:var(--surface-2); cursor:pointer; }
+.num{ text-align:right; font-variant-numeric:tabular-nums; }
+.muted{ font-size:11.5px; color:var(--ink-3); margin-top:3px; }
+.scroll{ max-height:min(58vh,660px); overflow:auto; }
+.pill{ display:inline-block; padding:3px 10px; border-radius:99px; font-size:11.5px;
+       font-weight:620; letter-spacing:.01em; white-space:nowrap; }
+.pill.proposed{ background:#3fc79a1f; color:var(--good); }
+.pill.awaiting-data{ background:#ffb45e1f; color:var(--warm); }
+.pill.in-progress{ background:#6ea8ff1f; color:var(--cool); }
+.pill.received{ background:var(--surface-3); color:var(--ink-2); }
+.pill.error{ background:#ff6b7a1f; color:var(--hot); }
+.bar{ height:5px; background:var(--surface-3); border-radius:99px; overflow:hidden;
+      margin-top:7px; }
+.bar i{ display:block; height:100%; border-radius:99px;
+        background:linear-gradient(90deg,var(--accent),var(--accent-2)); }
+.empty{ color:var(--ink-3); padding:44px 24px; text-align:center; font-size:13.5px; }
+.empty b{ display:block; color:var(--ink-2); font-size:15px; font-weight:600;
+          margin-bottom:6px; }
+
+/* team */
+.team{ display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+       gap:1px; background:var(--line-soft); }
+.member{ background:var(--surface); padding:17px 20px; display:flex; gap:13px; }
+.member .av{ width:40px; height:40px; border-radius:11px; flex:none; display:grid;
+             place-items:center; font-size:19px; background:var(--surface-2);
+             border:1px solid var(--line); }
+.member .nm{ font-weight:650; font-size:14px; letter-spacing:-0.01em; }
+.member .rl{ font-size:12.5px; color:var(--ink-2); margin-top:1px; }
+.member .sk{ font-size:11.5px; color:var(--ink-3); margin-top:7px; }
+
+/* ===================== modal ===================== */
+.backdrop{ position:fixed; inset:0; background:#05070ab8; backdrop-filter:blur(4px);
+           display:none; z-index:60; padding:28px 20px; overflow-y:auto; }
+.backdrop.open{ display:block; animation:fade .18s; }
+@keyframes fade{ from{opacity:0;} }
+.modal{ max-width:980px; margin:0 auto; background:var(--surface);
+        border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); }
+.modal-head{ display:flex; align-items:center; gap:12px; padding:16px 22px;
+             border-bottom:1px solid var(--line-soft); }
+.modal-head .t{ font-size:16px; font-weight:660; letter-spacing:-0.01em; }
+.doc{ padding:22px 26px 30px; max-height:68vh; overflow-y:auto; }
+.doc h1{ font-size:21px; margin:0 0 14px; padding-bottom:14px;
+         border-bottom:1px solid var(--line-soft); }
+.doc h2{ font-size:11px; font-weight:750; letter-spacing:.13em; text-transform:uppercase;
+         color:var(--accent); margin:26px 0 9px; }
+.doc h3{ font-size:16px; margin:14px 0 6px; }
+.doc ul{ margin:8px 0; padding-left:20px; }
+.doc li{ margin:5px 0; color:var(--ink-2); }
+.doc p{ color:var(--ink-2); margin:8px 0; }
+.doc strong{ color:var(--ink); font-weight:640; }
+.doc em{ color:var(--ink-3); font-size:12.5px; }
+.kv{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+     gap:0 32px; }
+.kv div{ border-bottom:1px solid var(--line-soft); padding:9px 0; font-size:13.5px;
+         display:flex; justify-content:space-between; gap:16px; }
+.kv b{ color:var(--ink-3); font-weight:450; }
+.kv span{ text-align:right; font-weight:520; }
+
+.toast{ position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(14px);
+        background:var(--surface-3); border:1px solid var(--line); color:var(--ink);
+        padding:12px 20px; border-radius:11px; z-index:90; font-size:13.5px;
+        box-shadow:var(--shadow); opacity:0; pointer-events:none;
+        transition:opacity .2s, transform .2s; max-width:min(560px,88vw); }
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+footer{ border-top:1px solid var(--line-soft); background:var(--bg-2); }
+.footer-in{ max-width:var(--maxw); margin:0 auto; padding:22px 28px;
+            display:flex; gap:16px; flex-wrap:wrap; font-size:12px;
+            color:var(--ink-3); }
+.footer-in b{ color:var(--ink-2); font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <div class="logo">
+      <div class="glyph">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff"
+             stroke-width="1.9" stroke-linecap="round">
+          <path d="M8 21c-1.6-1.4-2.4-3-2.4-4.7C5.6 13 8 11.4 8 8.6 8 6.6 7.2 5 5.6 3.6"/>
+          <path d="M15.5 21c-1.6-1.4-2.4-3-2.4-4.7 0-3.3 2.4-4.9 2.4-7.7 0-2-.8-3.6-2.4-5"/>
+          <path d="M21.5 18.5c-.9-.8-1.4-1.8-1.4-2.8 0-2 1.4-2.9 1.4-4.6"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">TECOMA <span style="color:var(--accent)">Drying Technology</span></div>
+        <div class="sub">S.r.l. · Maranello (MO) · Italy</div>
+      </div>
+    </div>
+    <div class="status"><span class="dot" id="dot"></span><span id="livetext">connecting…</span></div>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="hero-in">
+    <div>
+      <div class="eyebrow">Multi-agent sales desk</div>
+      <h1>Drying plants, quoted by a desk of <em>ten specialists</em>.</h1>
+      <p class="lede">
+        An enquiry arrives. Intake qualifies it, process engineering picks the dryer,
+        safety reviews it, cost engineering prices it and the proposal is written —
+        agent to agent, in the open, in about a minute.
+      </p>
+      <div class="sectors">
+        <span class="sector">Food</span><span class="sector">Feed</span>
+        <span class="sector">Dairy</span><span class="sector">Nutraceutical</span>
+        <span class="sector">Pharma</span><span class="sector">Rendering</span>
+        <span class="sector">Chemical</span>
+      </div>
+      <div class="roster" id="roster"></div>
+    </div>
+    <div class="figures" id="figures"></div>
+  </div>
+</section>
+
+<main class="work">
+
+  <!-- ============ intake ============ -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Customer seeding data</h2>
+      <p>The intake form is data, not code — every question below is a row you control.</p>
+    </div>
+    <div class="seg">
+      <div class="s active" data-lt="intake">New enquiry</div>
+      <div class="s" data-lt="builder">Form builder</div>
+    </div>
+
+    <div class="tabpane active" id="lt-intake">
+      <div class="card-body">
+        <form id="seedform"></form>
+        <div class="actions">
+          <button id="submit">Send to the desk</button>
+          <button class="ghost sm" id="demofill" type="button">Example</button>
+          <button class="ghost sm" id="clearform" type="button">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabpane" id="lt-builder">
+      <div class="card-body">
+        <p style="margin:0 0 18px;font-size:12.5px;color:var(--ink-3);line-height:1.55">
+          Add a question and it is live immediately — on the form, in validation and in
+          every agent's view of the case. The agents add questions here too, when a live
+          case reveals something the form never asked.
+        </p>
+        <div class="field"><label>Key <span class="req">*</span></label>
+          <input type="text" id="nf_key" placeholder="bulk_density_kgm3"></div>
+        <div class="field"><label>Label</label>
+          <input type="text" id="nf_label" placeholder="Bulk density of the dried product"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+          <div class="field"><label>Group</label><input type="text" id="nf_group" value="Custom"></div>
+          <div class="field"><label>Type</label>
+            <select id="nf_type">
+              <option value="text">Text</option><option value="number">Number</option>
+              <option value="select">Choice</option><option value="bool">Yes / no</option>
+              <option value="textarea">Long text</option>
+            </select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+          <div class="field"><label>Unit</label><input type="text" id="nf_unit" placeholder="kg/m³"></div>
+          <div class="field"><label>Choices <span class="unit">(comma separated)</span></label>
+            <input type="text" id="nf_options" placeholder="low, medium, high"></div>
+        </div>
+        <div class="field"><label>Help text</label><input type="text" id="nf_help"></div>
+        <div class="checkline" style="margin-bottom:16px">
+          <input type="checkbox" id="nf_required"><label for="nf_required">Required to open a case</label>
+        </div>
+        <button id="addfield" type="button">Add to the intake form</button>
+        <div class="group-title" style="margin-top:26px">Current schema</div>
+        <div id="fieldlist"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ desk ============ -->
+  <section class="card">
+    <div class="seg" style="margin:12px 20px">
+      <div class="s active" data-rt="dash">Overview</div>
+      <div class="s" data-rt="wall">Live desk</div>
+      <div class="s" data-rt="pipe">Enquiries</div>
+      <div class="s" data-rt="cust">Customers</div>
+      <div class="s" data-rt="team">The agents</div>
+    </div>
+
+    <div class="tabpane active" id="rt-dash">
+      <div class="kpis" id="kpis"></div>
+      <div class="split">
+        <div><div class="sec-head">Pipeline by sector</div><div id="byindustry"></div></div>
+        <div><div class="sec-head">Technology mix</div><div id="bytech"></div></div>
+      </div>
+      <div class="sec-head" style="border-top:1px solid var(--line-soft)">Next actions</div>
+      <div class="scroll" id="followups"></div>
+    </div>
+
+    <div class="tabpane" id="rt-wall">
+      <div class="wallbar">
+        <div class="ctx" id="wallctx">Watching all cases</div>
+        <button class="ghost sm" id="showall" style="margin-left:auto">All traffic</button>
+        <button class="ghost sm" id="clearwall">Clear</button>
+      </div>
+      <div id="wall"><div class="empty"><b>The desk is quiet</b>Submit an enquiry on the left and the agents start working it here, message by message.</div></div>
+    </div>
+
+    <div class="tabpane" id="rt-pipe"><div class="scroll" id="pipetable"></div></div>
+    <div class="tabpane" id="rt-cust"><div class="scroll" id="custtable"></div></div>
+    <div class="tabpane" id="rt-team"><div class="team" id="teamlist"></div></div>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-in">
+    <div><b>TECOMA DRYING TECHNOLOGY S.r.l.</b> — design and manufacture of drying
+      plants for liquid, solid and semi-solid products.</div>
+    <div style="margin-left:auto">Budget figures are AACE Class 4 (−20% / +30%).
+      Every proposal ends at a pilot trial in Maranello.</div>
+  </div>
+</footer>
+
+<div class="backdrop" id="backdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="t" id="modaltitle">Enquiry</div>
+      <button class="ghost sm" id="closemodal" style="margin-left:auto">Close</button>
+    </div>
+    <div class="seg" style="margin:12px 22px">
+      <div class="s active" data-mt="prop">Proposal</div>
+      <div class="s" data-mt="seed">Seeding data</div>
+      <div class="s" data-mt="trace">Agent transcript</div>
+    </div>
+    <div class="tabpane active" id="mt-prop"><div class="doc" id="propdoc"></div></div>
+    <div class="tabpane" id="mt-seed"><div class="doc"><div class="kv" id="seedkv"></div></div></div>
+    <div class="tabpane" id="mt-trace"><div class="doc" id="tracebody"></div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const api = async (url, opts) => {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error((await r.json().catch(()=>({detail:r.statusText}))).detail);
+  return r.status === 204 ? null : r.json();
+};
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = n => n == null ? '—' : Math.round(n).toLocaleString('en-GB');
+const eur = n => n == null ? '—' : '€' + num(n);
+const eurShort = n => {
+  if (n == null) return '—';
+  if (n >= 1e6) return '€' + (n/1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M';
+  if (n >= 1e3) return '€' + Math.round(n/1e3) + 'k';
+  return eur(n);
+};
+
+let AGENTS = {}, FIELDS = [], FOCUS = null;
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3600);
+}
+
+/* ---------------- segmented navigation ---------------- */
+function wireTabs(attr, prefix, onShow) {
+  $$(`[data-${attr}]`).forEach(tab => tab.onclick = () => {
+    const scope = tab.parentElement;
+    $$(`[data-${attr}]`, scope).forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const key = tab.dataset[attr];
+    $$(`[id^="${prefix}-"]`).forEach(p => p.classList.toggle('active', p.id === `${prefix}-${key}`));
+    onShow && onShow(key);
+  });
+}
+const goTab = k => $$('[data-rt]').find(t => t.dataset.rt === k).click();
+
+/* ---------------- intake form ---------------- */
+async function loadFields() {
+  FIELDS = await api('/api/seed-fields');
+  const form = $('#seedform'); form.innerHTML = '';
+  let group = null;
+  for (const f of FIELDS) {
+    if (f.group_name !== group) {
+      group = f.group_name;
+      form.insertAdjacentHTML('beforeend', `<div class="group-title">${esc(group)}</div>`);
+    }
+    form.insertAdjacentHTML('beforeend', renderField(f));
+  }
+  renderFieldList();
+}
+
+function renderField(f) {
+  const id = 'f_' + f.key;
+  const unit = f.unit ? ` <span class="unit">(${esc(f.unit)})</span>` : '';
+  const req  = f.required ? ' <span class="req">*</span>' : '';
+  const help = f.help_text ? `<div class="help">${esc(f.help_text)}</div>` : '';
+  const dv   = esc(f.default_value || '');
+  let input;
+  if (f.field_type === 'bool')
+    return `<div class="field"><div class="checkline">
+      <input type="checkbox" id="${id}" data-key="${f.key}" data-type="bool">
+      <label for="${id}">${esc(f.label)}${req}</label></div>${help}</div>`;
+  if (f.field_type === 'select')
+    input = `<select id="${id}" data-key="${f.key}"><option value=""></option>` +
+      f.options.map(o => `<option${o===f.default_value?' selected':''}>${esc(o)}</option>`).join('') + '</select>';
+  else if (f.field_type === 'number')
+    input = `<input type="number" step="any" id="${id}" data-key="${f.key}" value="${dv}">`;
+  else if (f.field_type === 'textarea')
+    input = `<textarea id="${id}" data-key="${f.key}">${dv}</textarea>`;
+  else
+    input = `<input type="text" id="${id}" data-key="${f.key}" value="${dv}">`;
+  return `<div class="field"><label for="${id}">${esc(f.label)}${unit}${req}</label>${input}${help}</div>`;
+}
+
+function collect() {
+  const out = {};
+  $$('#seedform [data-key]').forEach(el => {
+    if (el.dataset.type === 'bool') { if (el.checked) out[el.dataset.key] = 'true'; }
+    else if (el.value !== '') out[el.dataset.key] = el.value;
+  });
+  return out;
+}
+
+const EXAMPLE = {
+  company_name:"Caseificio Val d'Enza", country:'Italy', city:'Reggio Emilia',
+  industry:'dairy', contact_name:'Chiara Bertolini',
+  contact_email:'c.bertolini@valdenza.it', contact_phone:'+39 0522 555444',
+  product_name:'sweet whey concentrate', feed_state:'liquid', feed_rate_kgh:'3200',
+  moisture_in_pct:'55', moisture_out_pct:'4', product_form_target:'agglomerated powder',
+  operating_hours_year:'6000', heat_recovery:true, budget_eur:'2400000',
+  current_cost_eur_year:'980000', timeline:'6-12 months',
+  decision_stage:'vendor selection',
+  notes:'Whey currently sold as liquid to a third party. They want to dry on site.'
+};
+
+$('#demofill').onclick = () => {
+  for (const [k, v] of Object.entries(EXAMPLE)) {
+    const el = $(`#f_${k}`); if (!el) continue;
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = v;
+  }
+  toast('Example loaded — change anything, then send it to the desk');
+};
+$('#clearform').onclick = () => { $('#seedform').reset();
+  $$('#seedform input[type=checkbox]').forEach(c => c.checked = false); };
+
+$('#submit').onclick = async (e) => {
+  e.preventDefault();
+  const values = collect();
+  if (!values.company_name) { toast('Company is required to open a case'); return; }
+  const btn = $('#submit'); btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await api('/api/enquiries', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ title: values.product_name ?
+        `${values.product_name} — ${values.company_name}` : null, values })
+    });
+    focusOn(r.enquiry_id, r.ref);
+    goTab('wall');
+    toast(`${r.ref} opened — the desk is on it`);
+  } catch (err) { toast('Rejected: ' + err.message); }
+  btn.disabled = false; btn.textContent = 'Send to the desk';
+};
+
+/* ---------------- form builder ---------------- */
+function renderFieldList() {
+  $('#fieldlist').innerHTML = `<table><tbody>` + FIELDS.map(f => `
+    <tr><td style="padding-left:0">
+        <div style="font-weight:580;font-size:13.5px">${esc(f.label)}${f.required?' <span class="req">*</span>':''}</div>
+        <div class="muted mono">${esc(f.key)} · ${esc(f.field_type)}${f.unit?' · '+esc(f.unit):''} · ${esc(f.group_name)}${f.system?' · system':''}</div>
+      </td>
+      <td class="num" style="padding-right:0"><button class="ghost sm" data-del="${esc(f.key)}">${f.system?'Retire':'Delete'}</button></td>
+    </tr>`).join('') + `</tbody></table>`;
+  $$('[data-del]').forEach(b => b.onclick = async () => {
+    await api('/api/seed-fields/' + encodeURIComponent(b.dataset.del), {method:'DELETE'});
+    await loadFields(); toast('Intake form updated');
+  });
+}
+
+$('#addfield').onclick = async () => {
+  const key = $('#nf_key').value.trim();
+  if (!key) { toast('A key is required'); return; }
+  const body = {
+    key, label: $('#nf_label').value.trim() || key,
+    group_name: $('#nf_group').value.trim() || 'Custom',
+    field_type: $('#nf_type').value, unit: $('#nf_unit').value.trim() || null,
+    required: $('#nf_required').checked,
+    options: $('#nf_options').value.split(',').map(s=>s.trim()).filter(Boolean),
+    help_text: $('#nf_help').value.trim() || null
+  };
+  try {
+    await api('/api/seed-fields', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    ['nf_key','nf_label','nf_unit','nf_options','nf_help'].forEach(i => $('#'+i).value = '');
+    $('#nf_required').checked = false;
+    await loadFields();
+    toast(`"${body.label}" is now on the intake form`);
+  } catch (err) { toast('Rejected: ' + err.message); }
+};
+
+/* ---------------- live wall ---------------- */
+const agentOf = name => AGENTS[name] || {emoji: name === '*' ? '📣' : '👤', color:'var(--ink-2)'};
+
+function renderMsg(m) {
+  const a = agentOf(m.sender);
+  const to = m.recipient === '*' ? 'the desk' : m.recipient;
+  const payload = m.payload && Object.keys(m.payload).length
+    ? `<details class="payload"><summary>Show payload</summary><pre>${esc(JSON.stringify(m.payload, null, 2))}</pre></details>` : '';
+  return `<div class="msg ${esc(m.kind)}">
+    <div class="av" style="border-color:${a.color}55">${a.emoji}</div>
+    <div style="flex:1;min-width:0">
+      <div class="hd">
+        <span class="who" style="color:${a.color}">${esc(m.sender)}</span>
+        <span class="arrow">→ ${esc(to)}</span>
+        <span class="intent">${esc(m.intent)}</span>
+        <span class="ts">${esc((m.ts||'').slice(11,19))}</span>
+      </div>
+      <div class="text">${esc(m.body)}</div>
+      ${payload}
+    </div></div>`;
+}
+
+function pushMsg(m) {
+  if (FOCUS && m.enquiry_id !== FOCUS) return;
+  const wall = $('#wall');
+  if (wall.querySelector('.empty')) wall.innerHTML = '';
+  const stick = wall.scrollTop + wall.clientHeight > wall.scrollHeight - 70;
+  wall.insertAdjacentHTML('beforeend', renderMsg(m));
+  if (stick) wall.scrollTop = wall.scrollHeight;
+}
+
+function focusOn(id, ref) {
+  FOCUS = id;
+  $('#wallctx').innerHTML = `Watching <b>${esc(ref || 'enquiry ' + id)}</b>`;
+  $('#wall').innerHTML = '<div class="empty"><b>Case queued on the desk</b>Leo is opening it now.</div>';
+}
+$('#showall').onclick = () => { FOCUS = null;
+  $('#wallctx').textContent = 'Watching all cases';
+  $('#wall').innerHTML = '<div class="empty"><b>All traffic</b>Every case the desk works will appear here.</div>'; };
+$('#clearwall').onclick = () => $('#wall').innerHTML = '<div class="empty"><b>Cleared</b>New messages will appear as they arrive.</div>';
+
+/* ---------------- dashboard ---------------- */
+async function loadDashboard() {
+  const d = await api('/api/dashboard');
+
+  $('#figures').innerHTML = [
+    ['Pipeline value', eurShort(d.pipeline_eur), `${d.proposals} proposals issued`, true],
+    ['Live enquiries', num(d.enquiries), `${d.customers} customers on file`, false],
+    ['Avg lead score', d.avg_score + '<span style="font-size:.55em;color:var(--ink-3)">/100</span>', 'across qualified cases', false],
+    ['Water evaporated', num(d.evaporation_kgh) + '<span style="font-size:.5em;color:var(--ink-3)"> kg/h</span>', 'total quoted duty', false],
+  ].map(([l, v, n, acc]) => `<div class="figure${acc?' accent':''}">
+      <div class="v">${v}</div><div class="l">${l}</div><div class="n">${n}</div></div>`).join('');
+
+  $('#kpis').innerHTML = [
+    ['Pipeline value', eur(d.pipeline_eur)],
+    ['Enquiries', num(d.enquiries)],
+    ['Proposals', num(d.proposals)],
+    ['Customers', num(d.customers)],
+    ['Avg score', d.avg_score + '/100'],
+    ['Evaporation', num(d.evaporation_kgh) + ' kg/h'],
+    ['Agent messages', num(d.agent_messages)],
+    ['Seeding fields', num(d.seed_fields)],
+  ].map(([l, v]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  const maxI = Math.max(1, ...d.by_industry.map(r => r.value_eur));
+  $('#byindustry').innerHTML = `<table><tbody>` + d.by_industry.map(r => `
+    <tr><td style="text-transform:capitalize">${esc(r.industry)}
+        <div class="bar"><i style="width:${Math.max(2, r.value_eur/maxI*100)}%"></i></div></td>
+        <td class="num" style="white-space:nowrap">${eurShort(r.value_eur)}
+        <div class="muted">${r.enquiries} enquir${r.enquiries===1?'y':'ies'}</div></td></tr>`
+  ).join('') + `</tbody></table>`;
+
+  $('#bytech').innerHTML = d.by_technology.length ? `<table><tbody>` + d.by_technology.map(r => `
+    <tr><td>${esc(r.technology)}<div class="muted">${r.n} plant${r.n===1?'':'s'}</div></td>
+        <td class="num">${eurShort(r.value_eur)}</td></tr>`
+  ).join('') + `</tbody></table>` : '<div class="empty"><b>No proposals yet</b>Sized plants will be grouped here by machine.</div>';
+
+  $('#followups').innerHTML = d.follow_ups.length ? `<table>
+    <thead><tr><th>Due</th><th>Owner</th><th>Customer</th><th>Action</th></tr></thead><tbody>` +
+    d.follow_ups.map(f => `<tr><td class="mono" style="white-space:nowrap">${esc(f.due_date)}</td>
+      <td style="white-space:nowrap">${esc(f.owner)}</td>
+      <td>${esc(f.company)}<div class="muted mono">${esc(f.ref)}</div></td>
+      <td style="color:var(--ink-2)">${esc(f.action)}</td></tr>`).join('') + `</tbody></table>`
+    : '<div class="empty"><b>Nothing booked</b>Paolo books the next action when a case closes.</div>';
+}
+
+async function loadPipeline() {
+  const rows = await api('/api/enquiries');
+  $('#pipetable').innerHTML = rows.length ? `<table>
+    <thead><tr><th>Ref</th><th>Customer</th><th>Product &amp; technology</th><th>Stage</th>
+    <th class="num">Score</th><th class="num">Value</th><th></th></tr></thead><tbody>` +
+    rows.map(r => `<tr class="clickable" data-open="${r.id}">
+      <td class="mono" style="white-space:nowrap">${esc(r.ref)}</td>
+      <td><div style="font-weight:580">${esc(r.company)}</div>
+          <div class="muted" style="text-transform:capitalize">${esc(r.industry||'')}${r.industry&&(r.city||r.country)?' · ':''}${esc(r.city||r.country||'')}</div></td>
+      <td>${esc(r.title)}<div class="muted">${esc(r.technology||'not sized yet')}</div></td>
+      <td><span class="pill ${esc(r.status)}">${esc(r.stage)}</span></td>
+      <td class="num">${r.score||'—'}</td>
+      <td class="num" style="white-space:nowrap">${eurShort(r.capex_eur)}</td>
+      <td class="num"><button class="ghost sm" data-run="${r.id}">Re-run</button></td>
+    </tr>`).join('') + `</tbody></table>`
+    : '<div class="empty"><b>No enquiries yet</b>Send one in from the intake form.</div>';
+
+  $$('[data-open]').forEach(tr => tr.onclick = e => {
+    if (e.target.dataset.run) return; openEnquiry(tr.dataset.open); });
+  $$('[data-run]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const id = +b.dataset.run;
+    focusOn(id, null); goTab('wall');
+    await api(`/api/enquiries/${id}/run`, {method:'POST'});
+    toast('The desk is re-running the case');
+  });
+}
+
+async function loadCustomers() {
+  const rows = await api('/api/customers');
+  $('#custtable').innerHTML = rows.length ? `<table>
+    <thead><tr><th>Company</th><th>Sector</th><th>Contact</th><th class="num">Enquiries</th>
+    <th class="num">Best score</th><th class="num">Pipeline</th><th>Last activity</th></tr></thead><tbody>` +
+    rows.map(c => `<tr>
+      <td><div style="font-weight:600">${esc(c.company)}</div>
+          <div class="muted">${esc(c.city||'')}${c.city&&c.country?', ':''}${esc(c.country||'')}</div></td>
+      <td style="text-transform:capitalize">${esc(c.industry||'—')}</td>
+      <td>${esc(c.contact_name||'—')}<div class="muted">${esc(c.contact_email||'')}</div></td>
+      <td class="num">${c.enquiries}</td>
+      <td class="num">${c.best_score||'—'}</td>
+      <td class="num" style="white-space:nowrap">${eurShort(c.pipeline_eur)}</td>
+      <td class="mono muted" style="margin:0">${esc((c.last_activity||'').slice(0,10))}</td>
+    </tr>`).join('') + `</tbody></table>`
+    : '<div class="empty"><b>No customers yet</b>The first enquiry creates the master record.</div>';
+}
+
+async function loadTeam() {
+  const list = await api('/api/agents');
+  AGENTS = Object.fromEntries(list.map(a => [a.name, a]));
+  $('#teamlist').innerHTML = list.map(a => `
+    <div class="member">
+      <div class="av" style="border-color:${a.color}66">${a.emoji}</div>
+      <div><div class="nm" style="color:${a.color}">${esc(a.name)}</div>
+        <div class="rl">${esc(a.role)}</div>
+        <div class="sk">${a.skills.map(esc).join(' · ')}</div></div></div>`).join('');
+  $('#roster').innerHTML = list.map(a => `
+    <div class="face" style="border-color:${a.color}55">${a.emoji}
+      <span class="tip"><b>${esc(a.name)}</b> — ${esc(a.role)}</span></div>`).join('')
+    + `<span class="count">${list.length} agents on the desk</span>`;
+}
+
+/* ---------------- enquiry modal ---------------- */
+function md(text) {
+  return esc(text)
+    .replace(/^# (.*)$/gm, '<h1>$1</h1>')
+    .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+    .replace(/^\s*- (.*)$/gm, '<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g, '<ul>$1</ul>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/_(.+?)_/g, '<em>$1</em>')
+    .replace(/^(?!<[hlu])(.+)$/gm, '<p>$1</p>');
+}
+
+async function openEnquiry(id) {
+  const d = await api('/api/enquiries/' + id);
+  $('#modaltitle').innerHTML = `${esc(d.ref)} · ${esc(d.company)}
+    <span class="pill ${esc(d.status)}" style="margin-left:10px">${esc(d.status)}</span>`;
+  const doc = d.proposal?.payload?.document;
+  $('#propdoc').innerHTML = doc ? md(doc) :
+    `<div class="empty"><b>No proposal on this case</b>${d.status==='awaiting-data' ?
+      'The desk parked it — required seeding data is missing, so nothing was sized.' : ''}</div>`;
+  const labels = Object.fromEntries(FIELDS.map(f => [f.key, f.label]));
+  $('#seedkv').innerHTML = Object.entries(d.seed_values).map(([k, v]) =>
+    `<div><b>${esc(labels[k] || k)}</b><span>${esc(v)}</span></div>`).join('')
+    || '<div class="empty"><b>No seeding data</b></div>';
+  $('#tracebody').innerHTML = d.messages.length
+    ? d.messages.map(renderMsg).join('') : '<div class="empty"><b>No transcript</b></div>';
+  $('#backdrop').classList.add('open');
+}
+$('#closemodal').onclick = () => $('#backdrop').classList.remove('open');
+$('#backdrop').onclick = e => { if (e.target.id === 'backdrop') e.target.classList.remove('open'); };
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') $('#backdrop').classList.remove('open'); });
+
+/* ---------------- live stream ---------------- */
+let refreshTimer = null;
+function scheduleRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => { loadDashboard(); loadPipeline(); loadCustomers(); }, 700);
+}
+
+function connect() {
+  const es = new EventSource('/api/stream');
+  es.onopen = () => { $('#dot').classList.add('on'); $('#livetext').textContent = 'Desk live'; };
+  es.onerror = () => { $('#dot').classList.remove('on'); $('#livetext').textContent = 'Reconnecting…'; };
+  es.onmessage = ev => {
+    const e = JSON.parse(ev.data);
+    if (e.type === 'message') { pushMsg(e); if (e.intent?.startsWith('case.')) scheduleRefresh(); }
+    else if (e.type === 'schema-changed') {
+      loadFields();
+      toast(e.removed ? `Field "${e.key}" retired`
+        : `${e.by} added "${e.label}" to the seeding form`);
+    }
+    else if (e.type === 'enquiry-updated' || e.type === 'enquiry-created') scheduleRefresh();
+  };
+}
+
+/* ---------------- boot ---------------- */
+wireTabs('lt', 'lt');
+wireTabs('rt', 'rt', k => ({dash:loadDashboard, pipe:loadPipeline,
+                            cust:loadCustomers, team:loadTeam}[k]?.()));
+wireTabs('mt', 'mt');
+(async () => {
+  await loadTeam();
+  await loadFields();
+  await loadDashboard();
+  await loadPipeline();
+  connect();
+})();
+</script>
+</body>
+</html>

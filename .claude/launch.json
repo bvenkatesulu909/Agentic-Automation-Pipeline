@@ -28,6 +28,49 @@
         "--app-dir", "drying-plant-erp/src"
       ],
       "port": 8400
+    },
+    {
+      "name": "tecoma-sales",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "tecoma_sales", "--port", "8800"],
+      "port": 8800
+    },
+    {
+      "name": "tecoma-server",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m", "uvicorn", "tecoma_sales.server:app",
+        "--host", "127.0.0.1", "--port", "8820",
+        "--app-dir", "C:/Users/User/Desktop/tecoma"
+      ],
+      "port": 8820
+    },
+    {
+      "name": "feedback-desk",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "feedback_desk", "--port", "8900"],
+      "port": 8900
+    },
+    {
+      "name": "tecoma-static",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m", "http.server", "8810",
+        "--directory", "C:/Users/User/Desktop/tecoma/web"
+      ],
+      "port": 8810
+    },
+    {
+      "name": "customer-seeding",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["app.py"],
+      "port": 5000
+    },
+    {
+      "name": "copilot-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "copilot-streaming-ui"],
+      "port": 3000
     }
   ]
 }
