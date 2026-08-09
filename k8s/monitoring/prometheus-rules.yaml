@@ -1,0 +1,97 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: adk-agents-quality-gates
+  namespace: monitoring
+  labels:
+    app: adk-agents
+
+spec:
+  groups:
+    - name: adk-agents.rules
+      interval: 30s
+      rules:
+        # Error rate metric for canary analysis
+        - record: adk_agents:request_error_rate_5m
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m])) /
+            sum(rate(http_requests_total[5m]))
+
+        # Latency metric (P95) for canary analysis
+        - record: adk_agents:request_latency_p95
+          expr: |
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+
+        # Latency metric (P99) for monitoring
+        - record: adk_agents:request_latency_p99
+          expr: |
+            histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+
+        # Request success rate
+        - record: adk_agents:request_success_rate
+          expr: |
+            sum(rate(http_requests_total{status="200"}[5m])) /
+            sum(rate(http_requests_total[5m])) * 100
+
+        # Memory usage as percentage
+        - record: adk_agents:memory_usage_percent
+          expr: |
+            (container_memory_usage_bytes{pod=~"adk-agents-.*"} / container_spec_memory_limit_bytes{pod=~"adk-agents-.*"}) * 100
+
+        # CPU usage as percentage
+        - record: adk_agents:cpu_usage_percent
+          expr: |
+            (rate(container_cpu_usage_seconds_total{pod=~"adk-agents-.*"}[5m]) / container_spec_cpu_quota{pod=~"adk-agents-.*"}) * 100
+
+    - name: adk-agents.alerts
+      interval: 30s
+      rules:
+        - alert: HighErrorRate
+          expr: adk_agents:request_error_rate_5m > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            component: adk-agents
+          annotations:
+            summary: "High error rate detected"
+            description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.environment }}"
+
+        - alert: HighLatency
+          expr: adk_agents:request_latency_p95 > 2
+          for: 5m
+          labels:
+            severity: warning
+            component: adk-agents
+          annotations:
+            summary: "High P95 latency detected"
+            description: "P95 latency is {{ $value | humanizeDuration }} for {{ $labels.environment }}"
+
+        - alert: HighMemoryUsage
+          expr: adk_agents:memory_usage_percent > 80
+          for: 5m
+          labels:
+            severity: warning
+            component: adk-agents
+          annotations:
+            summary: "High memory usage"
+            description: "Memory usage is {{ $value | humanize }}% for {{ $labels.pod }}"
+
+        - alert: HighCPUUsage
+          expr: adk_agents:cpu_usage_percent > 80
+          for: 5m
+          labels:
+            severity: warning
+            component: adk-agents
+          annotations:
+            summary: "High CPU usage"
+            description: "CPU usage is {{ $value | humanize }}% for {{ $labels.pod }}"
+
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total{pod=~"adk-agents-.*"}[15m]) > 0.1
+          for: 5m
+          labels:
+            severity: critical
+            component: adk-agents
+          annotations:
+            summary: "Pod is crash looping"
+            description: "Pod {{ $labels.pod }} is restarting {{ $value | humanize }} times per minute"

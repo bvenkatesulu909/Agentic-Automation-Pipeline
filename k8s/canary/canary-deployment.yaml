@@ -1,0 +1,52 @@
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: adk-agents
+  namespace: adk-agents
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: adk-agents
+
+  service:
+    port: 8000
+    targetPort: 8000
+
+  analysis:
+    interval: 1m
+    threshold: 5
+    maxWeight: 50
+    stepWeight: 10
+    metrics:
+      - name: request-success-rate
+        thresholdRange:
+          min: 99
+        interval: 1m
+      - name: request-duration
+        thresholdRange:
+          max: 500
+        interval: 1m
+    webhooks:
+      - name: acceptance-test
+        url: http://flagger-loadtester/
+        timeout: 30s
+        metadata:
+          type: bash
+          cmd: "curl -f http://adk-agents-canary:8000/health"
+
+  # Alert notifications
+  skipAnalysis: false
+
+  # Traffic management (requires Istio or similar)
+  # Commented out - enable if using service mesh
+  # traffic:
+  #   canary:
+  #     weight: 0
+  #   stable:
+  #     weight: 100
+
+status:
+  canaryWeight: 0
+  iteration: 0
+  phase: Waiting

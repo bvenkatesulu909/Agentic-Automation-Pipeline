@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: adk-agents-staging
+  namespace: adk-agents
+  labels:
+    app: adk-agents
+    environment: staging
+
+spec:
+  selector:
+    matchLabels:
+      app: adk-agents
+
+  endpoints:
+    - port: metrics
+      interval: 60s
+      path: /metrics
+      scrapeTimeout: 10s

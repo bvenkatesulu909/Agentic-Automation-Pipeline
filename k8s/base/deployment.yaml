@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adk-agents
+  labels:
+    app: adk-agents
+
+spec:
+  selector:
+    matchLabels:
+      app: adk-agents
+
+  template:
+    metadata:
+      labels:
+        app: adk-agents
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+
+    spec:
+      serviceAccountName: adk-agents
+
+      containers:
+        - name: adk-agents
+          image: us-west1-docker.pkg.dev/venkatesh-68cb677e/adk/adk-agents:latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+
+          env:
+            - name: PORT
+              value: "8000"
+            - name: METRICS_PORT
+              value: "9090"
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ENVIRONMENT
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: LOG_LEVEL
+
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+              readOnly: true
+            - name: cache
+              mountPath: /tmp
+
+      volumes:
+        - name: config
+          configMap:
+            name: app-config
+        - name: cache
+          emptyDir:
+            sizeLimit: 1Gi

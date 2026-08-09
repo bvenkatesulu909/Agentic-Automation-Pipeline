@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: adk-agents
+
+bases:
+  - ../../base
+
+replicas:
+  - name: adk-agents
+    count: 3
+
+images:
+  - name: adk-agents
+    newTag: latest
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - service-patch.yaml
+
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - FEATURE_FLAGS_ENDPOINT=https://flags.example.com/api/flags
+      - ENABLE_CANARY_ANALYSIS=true
+
+secretGenerator:
+  - name: app-secrets
+    behavior: merge
+    envs:
+      - secrets.env
+
+resources:
+  - prometheus-servicemonitor.yaml
+  - network-policy.yaml

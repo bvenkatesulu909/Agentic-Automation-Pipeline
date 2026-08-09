@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: adk-agents
+
+bases:
+  - ../../base
+
+replicas:
+  - name: adk-agents
+    count: 1
+
+images:
+  - name: adk-agents
+    newTag: develop
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=staging
+      - LOG_LEVEL=debug
+      - FEATURE_FLAGS_ENDPOINT=https://flags-staging.example.com/api/flags
+      - ENABLE_CANARY_ANALYSIS=false
+
+resources:
+  - prometheus-servicemonitor.yaml

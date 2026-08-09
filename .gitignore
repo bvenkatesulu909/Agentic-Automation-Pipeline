@@ -14,6 +14,12 @@ dist/
 # Built index (regenerate with `ragstack index`)
 .ragstack_index/
 
+# TECOMA sales desk database (recreated on first run, with the demo book)
+tecoma_sales/tecoma.db*
+
+# Feedback desk database (recreated on first run, with the demo inbox)
+feedback_desk/feedback.db*
+
 # Test / tooling caches
 .pytest_cache/
 
@@ -34,3 +40,38 @@ drying-plant-erp/
 
 # Reference PDFs kept locally. Large binaries, and not source for this repo.
 *.pdf
+
+# CI/CD Secrets (DO NOT COMMIT)
+.secrets
+.env.secrets
+k8s/overlays/*/secrets.env
+k8s/overlays/*/.secrets
+
+# GitHub Actions
+.act
+
+# ArgoCD
+.argocd
+
+# Kustomize build output
+k8s/**/kustomization.yaml.bak
+
+# Generated files
+artifacts/
+*.tar.gz
+*.tar
+
+# IDE specific
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# Coverage
+.coverage
+htmlcov/
+
+# Docker build cache
+.docker/
+docker-compose.override.yml

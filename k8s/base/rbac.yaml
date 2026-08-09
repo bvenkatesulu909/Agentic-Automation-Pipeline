@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adk-agents
+  labels:
+    app: adk-agents
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: adk-agents
+  labels:
+    app: adk-agents
+
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: adk-agents
+  labels:
+    app: adk-agents
+
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: adk-agents
+
+subjects:
+  - kind: ServiceAccount
+    name: adk-agents

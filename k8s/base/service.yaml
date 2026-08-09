@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: adk-agents
+  labels:
+    app: adk-agents
+
+spec:
+  type: ClusterIP
+  selector:
+    app: adk-agents
+
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP

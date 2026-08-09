@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: adk-agents
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+  - rbac.yaml
+
+commonLabels:
+  app: adk-agents
+  managed-by: argocd
+
+commonAnnotations:
+  description: "ADK Agents Application"

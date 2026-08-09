@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feature-flags-rollout
+  namespace: adk-agents
+  labels:
+    app: feature-flags
+
+data:
+  rollouts.json: |
+    {
+      "flags": [
+        {
+          "name": "enable_new_router",
+          "type": "boolean",
+          "enabled": false,
+          "rolloutPercentage": 0,
+          "rules": [],
+          "environment": "production",
+          "description": "Enable new cost-optimized model router",
+          "createdAt": "2026-08-09T00:00:00Z",
+          "modifiedAt": "2026-08-09T00:00:00Z",
+          "modifiedBy": "system"
+        },
+        {
+          "name": "enable_new_pdf_qa",
+          "type": "boolean",
+          "enabled": false,
+          "rolloutPercentage": 0,
+          "rules": [],
+          "environment": "production",
+          "description": "Enable new PDF QA pipeline",
+          "createdAt": "2026-08-09T00:00:00Z",
+          "modifiedAt": "2026-08-09T00:00:00Z",
+          "modifiedBy": "system"
+        },
+        {
+          "name": "enable_experimental_model",
+          "type": "boolean",
+          "enabled": true,
+          "rolloutPercentage": 10,
+          "rules": [
+            {
+              "rolloutPercentage": 10,
+              "userIds": []
+            }
+          ],
+          "environment": "staging",
+          "description": "Experimental model serving in staging",
+          "createdAt": "2026-08-09T00:00:00Z",
+          "modifiedAt": "2026-08-09T00:00:00Z",
+          "modifiedBy": "system"
+        },
+        {
+          "name": "enable_debug_logging",
+          "type": "boolean",
+          "enabled": false,
+          "rolloutPercentage": 0,
+          "rules": [
+            {
+              "rolloutPercentage": 100,
+              "conditions": {
+                "environment": "staging"
+              }
+            }
+          ],
+          "environment": "all",
+          "description": "Enable debug logging (always on in staging)",
+          "createdAt": "2026-08-09T00:00:00Z",
+          "modifiedAt": "2026-08-09T00:00:00Z",
+          "modifiedBy": "system"
+        },
+        {
+          "name": "enable_canary_deployment",
+          "type": "boolean",
+          "enabled": true,
+          "rolloutPercentage": 100,
+          "rules": [],
+          "environment": "production",
+          "description": "Enable canary deployment strategy",
+          "createdAt": "2026-08-09T00:00:00Z",
+          "modifiedAt": "2026-08-09T00:00:00Z",
+          "modifiedBy": "system"
+        }
+      ]
+    }
