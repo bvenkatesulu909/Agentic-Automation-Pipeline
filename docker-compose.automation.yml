@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: automation-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - automation
+
+  # FastAPI application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.automation
+      target: api
+    container_name: automation-api
+    ports:
+      - "8000:8000"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_IDEMPOTENCY_URL: redis://redis:6379/2
+      REDIS_WEBHOOKS_URL: redis://redis:6379/3
+      REDIS_DLQ_URL: redis://redis:6379/4
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: uvicorn src.automation.app:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - automation
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Celery worker
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.automation
+      target: worker
+    container_name: automation-worker
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_IDEMPOTENCY_URL: redis://redis:6379/2
+      REDIS_WEBHOOKS_URL: redis://redis:6379/3
+      REDIS_DLQ_URL: redis://redis:6379/4
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: celery -A src.automation.celery_app worker --loglevel=info -c 4
+    networks:
+      - automation
+
+  # Celery beat (periodic tasks)
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.automation
+      target: beat
+    container_name: automation-beat
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_IDEMPOTENCY_URL: redis://redis:6379/2
+      REDIS_WEBHOOKS_URL: redis://redis:6379/3
+      REDIS_DLQ_URL: redis://redis:6379/4
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: celery -A src.automation.celery_app beat --loglevel=info
+    networks:
+      - automation
+
+  # Optional: Flower (Celery monitoring)
+  flower:
+    image: mher/flower:latest
+    container_name: automation-flower
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    depends_on:
+      - redis
+      - celery_worker
+    command: celery -A src.automation.celery_app flower --port=5555
+    networks:
+      - automation
+
+volumes:
+  redis_data:
+
+networks:
+  automation:
+    driver: bridge
+
+# Usage:
+# docker-compose -f docker-compose.automation.yml up
+#
+# Services:
+# - API: http://localhost:8000
+# - Flower (monitoring): http://localhost:5555
+# - Redis: localhost:6379
+#
+# Create a task:
+# curl -X POST http://localhost:8000/api/automation/tasks \
+#   -H "Content-Type: application/json" \
+#   -H "Idempotency-Key: test-123" \
+#   -d '{"task_type":"agent_process_query","payload":{"query":"test","agent_id":"agent_1"}}'
+#
+# Check status:
+# curl http://localhost:8000/api/automation/tasks/{task_id}
+#
+# View DLQ:
+# curl http://localhost:8000/api/automation/dead-letter-queue

@@ -1,0 +1,51 @@
+# Multi-stage Dockerfile for agentic automation pipeline
+
+# Base stage
+FROM python:3.11-slim as base
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY src/automation/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# API stage
+FROM base as api
+
+EXPOSE 8000
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["uvicorn", "src.automation.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Worker stage
+FROM base as worker
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["celery", "-A", "src.automation.celery_app", "worker", "--loglevel=info", "-c", "4"]
+
+# Beat stage
+FROM base as beat
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["celery", "-A", "src.automation.celery_app", "beat", "--loglevel=info"]
+
+# Production stage (combine all)
+FROM base as production
+
+EXPOSE 8000
+
+ENV PYTHONUNBUFFERED=1
+
+# Default to API, can override with docker run command
+CMD ["uvicorn", "src.automation.app:app", "--host", "0.0.0.0", "--port", "8000"]
